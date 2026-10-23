@@ -47,7 +47,7 @@ class InsightsScreen extends ConsumerWidget {
             children: <Widget>[
               const _WindowPicker(),
               const SizedBox(height: AppSpacing.lg),
-              ...insights.when(
+              ...insights.when( skipLoadingOnReload: true,
                 loading: () => <Widget>[
                   const Center(child: CircularProgressIndicator()),
                 ],

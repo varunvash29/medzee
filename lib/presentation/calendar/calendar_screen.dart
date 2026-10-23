@@ -225,7 +225,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
-              child: doses.when(
+              child: doses.when( skipLoadingOnReload: true,
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (Object e, StackTrace _) => Padding(
                   padding: const EdgeInsets.all(AppSpacing.gutter),

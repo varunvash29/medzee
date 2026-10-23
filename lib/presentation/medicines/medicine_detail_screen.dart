@@ -46,7 +46,7 @@ class MedicineDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: medication.when(
+      body: medication.when( skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (Object error, StackTrace _) => Center(
           child: Padding(
@@ -237,7 +237,7 @@ class _DetailState extends ConsumerState<_Detail> {
         else ...<Widget>[
         // ------------------------------------------------------------ stock
         SectionHeader(title: 'Stock'),
-        inventory.when(
+        inventory.when( skipLoadingOnReload: true,
           loading: () => const AppCard(child: SizedBox(height: 60)),
           error: (_, __) => const SizedBox.shrink(),
           data: (Inventory? inv) => _StockCard(medication: medication, inventory: inv),
@@ -252,7 +252,7 @@ class _DetailState extends ConsumerState<_Detail> {
             label: const Text('Edit'),
           ),
         ),
-        phases.when(
+        phases.when( skipLoadingOnReload: true,
           loading: () => const AppCard(child: SizedBox(height: 60)),
           error: (_, __) => const SizedBox.shrink(),
           data: (List<SchedulePhase> list) => _ScheduleCard(
@@ -264,7 +264,7 @@ class _DetailState extends ConsumerState<_Detail> {
 
         // --------------------------------------------------------- adherence
         SectionHeader(title: 'Adherence'),
-        adherence.when(
+        adherence.when( skipLoadingOnReload: true,
           loading: () => const AppCard(child: SizedBox(height: 60)),
           error: (_, __) => const SizedBox.shrink(),
           data: (MedicationAdherence value) {
@@ -435,7 +435,7 @@ class _StockCard extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          projection.when(
+          projection.when( skipLoadingOnReload: true,
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
             data: (SupplyProjection? p) {

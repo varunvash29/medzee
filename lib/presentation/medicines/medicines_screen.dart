@@ -115,7 +115,7 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
                   ref.read(libraryFilterProvider.notifier).setStatus(v.first),
             ),
             const SizedBox(height: AppSpacing.lg),
-            ...all.when(
+            ...all.when( skipLoadingOnReload: true,
               loading: () => <Widget>[
                 const Padding(
                   padding: EdgeInsets.all(AppSpacing.xxl),

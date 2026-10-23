@@ -197,6 +197,14 @@ class CloudSyncEngine {
         final Map<String, Object?> data = change.data!;
         final String hash = change.hash ?? hashRow(data);
         if (known[change.id] == hash) continue;
+        // Already identical here: just remember it. Rewriting an unchanged
+        // row would still make every screen watching the table refresh.
+        final Map<String, Object?>? local = await _localRow(table, change.id);
+        if (local != null && hashRow(local) == hash) {
+          known[change.id] = hash;
+          _localIds[table]!.add(change.id);
+          continue;
+        }
         if (await _localIsNewer(table, change.id, data)) continue;
         known[change.id] = hash;
         _localIds[table]!.add(change.id);
@@ -216,6 +224,14 @@ class CloudSyncEngine {
         onRemoteApplied?.call();
       });
     }
+  }
+
+  Future<Map<String, Object?>?> _localRow(String table, String id) async {
+    final List<QueryRow> rows = await _db.customSelect(
+      'SELECT * FROM $table WHERE id = ?',
+      variables: <Variable<Object>>[Variable<String>(id)],
+    ).get();
+    return rows.isEmpty ? null : Map<String, Object?>.from(rows.first.data);
   }
 
   Future<bool> _localIsNewer(

@@ -173,6 +173,35 @@ void main() {
     await hooked.stop();
   });
 
+  test('re-joining with identical data rewrites nothing locally', () async {
+    await phoneSync.start();
+    await webSync.start();
+    await phone.save(_med('m1', 'Metformin'));
+    await _settle();
+    expect(await web.getById('m1'), isNotNull);
+
+    // The web device restarts: a fresh engine sees the same rows in the cloud.
+    await webSync.stop();
+    int applied = 0;
+    int refreshes = 0;
+    final restarted = CloudSyncEngine(
+      webDb,
+      cloud.connect(),
+      onRemoteApplied: () async => applied++,
+    );
+    final sub = web.watchAll().listen((_) => refreshes++);
+    await _settle();
+    final int before = refreshes;
+
+    await restarted.start();
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+
+    expect(applied, 0, reason: 'nothing changed, so no reminder rebuild');
+    expect(refreshes, before, reason: 'and no screen refresh');
+    await sub.cancel();
+    await restarted.stop();
+  });
+
   test('hashRow ignores key order', () {
     expect(
       CloudSyncEngine.hashRow(<String, Object?>{'a': 1, 'b': 'x'}),

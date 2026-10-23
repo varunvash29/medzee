@@ -49,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
             children: <Widget>[
               _Header(profile: profile),
               const SizedBox(height: AppSpacing.xl),
-              ...timeline.when(
+              ...timeline.when( skipLoadingOnReload: true,
                 loading: () => const <Widget>[_Skeleton()],
                 error: (Object e, StackTrace _) => <Widget>[
                   InfoBanner(

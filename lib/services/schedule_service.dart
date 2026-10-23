@@ -85,10 +85,17 @@ class ScheduleService {
       }
     }
 
-    // 2. Insert the doses that should exist.
+    // 2. Insert the doses that should exist but do not yet.
+    final Set<String> have = <String>{
+      for (final ScheduledDose d in existing)
+        if (d.medicationId == medication.id) _doseKey(d),
+    };
     final List<ScheduledDose> toInsert = <ScheduledDose>[];
     for (final DoseOccurrence occurrence
         in ScheduleGenerator.occurrences(phases: usable, from: from, to: to)) {
+      final String key = '${occurrence.phaseId}|${_dayKey(occurrence.localDate)}'
+          '|${occurrence.minutes}';
+      if (have.contains(key)) continue;
       toInsert.add(
         ScheduledDose(
           id: _uuid.v4(),

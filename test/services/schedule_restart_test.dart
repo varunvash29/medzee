@@ -130,6 +130,27 @@ void main() {
       expect(after.length, first.length, reason: 'no duplicates either');
     });
 
+    test('a restart with nothing to change writes nothing (no screen refresh)',
+        () async {
+      await service.syncMedication(med, phases, now: now);
+
+      int emissions = 0;
+      final sub = doses.watchDosesInRange(from, to).listen((_) => emissions++);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final int afterInitial = emissions;
+
+      await service.syncMedication(
+        (await meds.getById('m1'))!,
+        await meds.getPhases('m1'),
+        now: now,
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+
+      expect(emissions, afterInitial,
+          reason: 'unchanged doses must not notify the UI again');
+      await sub.cancel();
+    });
+
     test('a dose that was taken stays taken after a restart', () async {
       await service.syncMedication(med, phases, now: now);
       final ScheduledDose target = (await all()).firstWhere(
