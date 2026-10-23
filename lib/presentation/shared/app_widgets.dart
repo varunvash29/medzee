@@ -461,7 +461,7 @@ class PrescribedAsTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: theme.colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -475,8 +475,6 @@ class PrescribedAsTag extends StatelessWidget {
           Flexible(
             child: Text(
               'Prescribed as $name',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onTertiaryContainer,
                 fontWeight: FontWeight.w700,

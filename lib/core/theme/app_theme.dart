@@ -164,6 +164,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surface,
+        // Helper and error text wrap onto further lines instead of ending in
+        // an ellipsis.
+        helperMaxLines: 4,
+        errorMaxLines: 4,
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
         ),
