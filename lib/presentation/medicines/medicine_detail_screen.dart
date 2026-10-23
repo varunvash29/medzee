@@ -19,6 +19,7 @@ import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
 import '../shared/motion_widgets.dart';
 import 'medicine_info_tabs.dart';
+import 'stock_sheet.dart';
 
 /// Single-medicine screen: identity, schedule, stock, history and lifecycle
 /// actions. Every destructive action is confirmed in plain language.
@@ -384,6 +385,16 @@ class _StockCard extends ConsumerWidget {
             const Expanded(
               child: Text('No stock tracked for this medicine yet.'),
             ),
+            FilledButton.tonal(
+              onPressed: () => showStockSheet(
+                context,
+                ref,
+                medication: medication,
+                inventory: null,
+                mode: StockMode.start,
+              ),
+              child: const Text('Track stock'),
+            ),
           ],
         ),
       );
@@ -447,6 +458,50 @@ class _StockCard extends ConsumerWidget {
                 icon: Icons.timelapse_rounded,
               );
             },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => showStockSheet(
+                    context,
+                    ref,
+                    medication: medication,
+                    inventory: inv,
+                    mode: StockMode.refill,
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: const Text('Add stock'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => showStockSheet(
+                    context,
+                    ref,
+                    medication: medication,
+                    inventory: inv,
+                    mode: StockMode.count,
+                  ),
+                  child: const Text('Set count'),
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => showStockSheet(
+                context,
+                ref,
+                medication: medication,
+                inventory: inv,
+                mode: StockMode.alert,
+              ),
+              child: const Text('Change low-stock alert'),
+            ),
           ),
         ],
       ),

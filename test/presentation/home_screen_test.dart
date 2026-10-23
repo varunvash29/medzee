@@ -136,7 +136,8 @@ void main() {
     );
 
     expect(find.text('Asha'), findsOneWidget);
-    expect(find.text("Today's schedule"), findsOneWidget);
+    expect(find.text('Up next'), findsOneWidget);
+    expect(find.text('Done · 1'), findsOneWidget);
     expect(find.text('1/2'), findsOneWidget);
     expect(find.text('NEXT DOSE'), findsOneWidget);
 

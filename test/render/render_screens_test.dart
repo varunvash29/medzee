@@ -218,6 +218,11 @@ void main() {
     }
 
     await visit(AppRoutes.home, 'home');
+    await t.drag(find.byType(Scrollable).first, const Offset(0, -700));
+    await t.pump(const Duration(milliseconds: 300));
+    await shoot(t, 'home_scrolled');
+    await t.drag(find.byType(Scrollable).first, const Offset(0, 700));
+    await t.pump(const Duration(milliseconds: 300));
     await visit(AppRoutes.medicines, 'medicines');
     await visit(AppRoutes.addMedicine, 'add');
     await t.enterText(find.byType(TextField).first, 'Dolo 650');
@@ -226,6 +231,11 @@ void main() {
     }
     await shoot(t, 'add_filled');
     await visit('/medicines/m1', 'detail');
+    await t.drag(find.byType(Scrollable).first, const Offset(0, -500));
+    await t.pump(const Duration(milliseconds: 300));
+    await shoot(t, 'detail_stock');
+    await t.drag(find.byType(Scrollable).first, const Offset(0, 500));
+    await t.pump(const Duration(milliseconds: 300));
     await t.tap(find.text('Info'));
     for (int i = 0; i < 12; i++) {
       await t.pump(const Duration(milliseconds: 100));
