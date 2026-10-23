@@ -71,6 +71,20 @@ class ScheduleService {
       await _doses.setStatus(dose.id, DoseStatus.cancelled);
     }
 
+    // 1b. Bring back future doses that are in the plan but were cancelled
+    // earlier (by a pause, or by an older build that mis-compared dates).
+    // They cannot simply be re-inserted: a medicine can only have one dose
+    // at a given instant, so the cancelled row would block the new one.
+    final DateTime nowUtc = reference.toUtc();
+    for (final ScheduledDose dose in existing) {
+      if (dose.medicationId == medication.id &&
+          dose.status == DoseStatus.cancelled &&
+          dose.scheduledAt.toUtc().isAfter(nowUtc) &&
+          keep.contains(_doseKey(dose))) {
+        await _doses.setStatus(dose.id, DoseStatus.pending);
+      }
+    }
+
     // 2. Insert the doses that should exist.
     final List<ScheduledDose> toInsert = <ScheduledDose>[];
     for (final DoseOccurrence occurrence
@@ -228,14 +242,17 @@ class ScheduleService {
       DateTime to) {
     return ScheduleGenerator.occurrences(phases: phases, from: from, to: to)
         .map((DoseOccurrence occurrence) =>
-            '${occurrence.phaseId}|${occurrence.localDate.toIso8601String()}'
+            '${occurrence.phaseId}|${_dayKey(occurrence.localDate)}'
             '|${occurrence.minutes}')
         .toSet();
   }
 
   String _doseKey(ScheduledDose dose) =>
-      '${dose.phaseId}|${dose.localDate.toIso8601String()}'
+      '${dose.phaseId}|${_dayKey(dose.localDate)}'
       '|${dose.scheduledMinutes}';
+
+  /// Calendar day as text, independent of time zone and of any time of day.
+  String _dayKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
   String _doseLabel(ScheduledDose dose) {
     final String quantity = dose.doseQuantity == dose.doseQuantity.roundToDouble()

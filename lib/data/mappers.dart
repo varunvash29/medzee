@@ -55,6 +55,14 @@ abstract final class Mappers {
   /// correctly regardless of the device timezone.
   static DateTime dateOnlyUtc(DateTime value) =>
       DateTime.utc(value.year, value.month, value.day);
+
+  /// The inverse of [dateOnlyUtc]: a stored UTC-midnight date becomes local
+  /// midnight of the *same calendar day*. Reading it back as a plain local
+  /// DateTime would shift the day (or the time of day) by the UTC offset.
+  static DateTime dateOnlyLocal(DateTime stored) {
+    final DateTime u = stored.toUtc();
+    return DateTime(u.year, u.month, u.day);
+  }
 }
 
 extension UserProfileRowMapper on UserProfileRow {
@@ -179,8 +187,8 @@ extension SchedulePhaseRowMapper on SchedulePhaseRow {
         medicationId: medicationId,
         order: phaseOrder,
         kind: ScheduleKind.fromName(kind),
-        startDate: startDate,
-        endDate: endDate,
+        startDate: Mappers.dateOnlyLocal(startDate),
+        endDate: endDate == null ? null : Mappers.dateOnlyLocal(endDate!),
         timesMinutes: Mappers.decodeIntList(timesMinutes),
         weekdays: Mappers.decodeIntList(weekdays).toSet(),
         intervalDays: intervalDays,
@@ -224,7 +232,7 @@ extension ScheduledDoseRowMapper on ScheduledDoseRow {
         medicationId: medicationId,
         phaseId: phaseId,
         scheduledAt: scheduledAt.toUtc(),
-        localDate: localDate,
+        localDate: Mappers.dateOnlyLocal(localDate),
         scheduledMinutes: scheduledMinutes,
         doseQuantity: doseQuantity,
         unit: DoseUnit.fromName(unit),
