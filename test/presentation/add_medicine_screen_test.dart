@@ -71,6 +71,9 @@ class _FakeKnowledge implements MedicineKnowledge {
   bool get isAvailable => true;
 
   @override
+  Future<void> remember(String name, MedicineProfile profile) async {}
+
+  @override
   MedicineProfile offlineGuess(String name) =>
       MedicineProfile(recognized: false, name: name);
 
@@ -154,7 +157,7 @@ void main() {
     await _pumpWizard(tester);
 
     await tester.enterText(find.byType(TextField).first, 'Dolo 650');
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 1300));
     await tester.pumpAndSettle();
 
     expect(find.text('Tablet'), findsOneWidget);
@@ -167,7 +170,7 @@ void main() {
     final _RecordingMedicationService service = await _pumpWizard(tester);
 
     await tester.enterText(find.byType(TextField).first, 'Dolo 650');
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 1300));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Twice'));
     await tester.pumpAndSettle();
@@ -188,7 +191,7 @@ void main() {
     final _RecordingMedicationService service = await _pumpWizard(tester);
 
     await tester.enterText(find.byType(TextField).first, 'Dolo 650');
-    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pump(const Duration(milliseconds: 1300));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Only when needed'));
     await tester.pumpAndSettle();

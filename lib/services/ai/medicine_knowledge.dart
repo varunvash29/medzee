@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:firebase_ai/firebase_ai.dart';
+import 'model_fallback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,9 @@ abstract class MedicineKnowledge {
   /// Never throws: returns [MedicineProfile.unknown] when nothing is found.
   Future<MedicineProfile> lookup(String name);
 
+  /// Stores a profile under [name] so a later lookup needs no request.
+  Future<void> remember(String name, MedicineProfile profile);
+
   /// What can be worked out without any network (strength and form typed in
   /// the name itself).
   MedicineProfile offlineGuess(String name);
@@ -30,7 +34,6 @@ class GeminiMedicineKnowledge implements MedicineKnowledge {
 
   final bool available;
 
-  static const String modelName = 'gemini-3.5-flash';
   static const Duration cacheFor = Duration(days: 30);
   static const String _prefix = 'medicine_profile_v1:';
 
@@ -145,6 +148,13 @@ Rules:
       '$_prefix${name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ')}';
 
   @override
+  Future<void> remember(String name, MedicineProfile profile) async {
+    if (!profile.recognized) return;
+    final SharedPreferences? prefs = await _prefs();
+    await prefs?.setString(_key(name), jsonEncode(profile.toJson()));
+  }
+
+  @override
   MedicineProfile offlineGuess(String name) {
     final InferredMedicine p = MedicineNameInference.parse(name);
     return MedicineProfile(
@@ -176,18 +186,21 @@ Rules:
     if (!available) return MedicineProfile.unknown;
 
     try {
-      final GenerativeModel model = FirebaseAI.googleAI().generativeModel(
-        model: modelName,
-        systemInstruction: Content.system(_instructions),
-        generationConfig: GenerationConfig(
-          temperature: 0,
-          responseMimeType: 'application/json',
-          responseSchema: _schema(),
+      final GenerateContentResponse r = await generateWithFallback(
+        models: AiModels.text,
+        build: (String m) => FirebaseAI.googleAI().generativeModel(
+          model: m,
+          systemInstruction: Content.system(_instructions),
+          generationConfig: GenerationConfig(
+            temperature: 0,
+            maxOutputTokens: 1800,
+            responseMimeType: 'application/json',
+            responseSchema: _schema(),
+          ),
         ),
+        content: <Content>[Content.text('Medicine: """$q"""')],
+        timeout: const Duration(seconds: 40),
       );
-      final GenerateContentResponse r = await model
-          .generateContent(<Content>[Content.text('Medicine: """$q"""')])
-          .timeout(const Duration(seconds: 40));
       final MedicineProfile profile = MedicineProfileParser.parse(
         r.text ?? '',
         queriedName: q,

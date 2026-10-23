@@ -32,6 +32,9 @@ class _FakeKnowledge implements MedicineKnowledge {
   bool get isAvailable => true;
 
   @override
+  Future<void> remember(String name, MedicineProfile profile) async {}
+
+  @override
   MedicineProfile offlineGuess(String name) =>
       MedicineProfile(recognized: false, name: name);
 

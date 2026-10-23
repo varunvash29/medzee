@@ -1,4 +1,5 @@
 import 'package:firebase_ai/firebase_ai.dart';
+import 'model_fallback.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -37,7 +38,6 @@ class GeminiScheduleAssistant implements ScheduleAssistant {
 
   final bool available;
 
-  static const String modelName = 'gemini-3.5-flash';
 
   @override
   bool get isAvailable => available;
@@ -157,17 +157,18 @@ Rules:
     context.writeln('Person\'s new message: """$message"""');
 
     try {
-      final GenerativeModel model = FirebaseAI.googleAI().generativeModel(
-        model: modelName,
-        systemInstruction: Content.system(_instructions),
-        generationConfig: GenerationConfig(
-          temperature: 0,
-          responseMimeType: 'application/json',
-          responseSchema: _schema(),
+      final GenerateContentResponse response = await generateWithFallback(
+        models: AiModels.text,
+        build: (String m) => FirebaseAI.googleAI().generativeModel(
+          model: m,
+          systemInstruction: Content.system(_instructions),
+          generationConfig: GenerationConfig(
+            temperature: 0,
+            responseMimeType: 'application/json',
+            responseSchema: _schema(),
+          ),
         ),
-      );
-      final GenerateContentResponse response = await model.generateContent(
-        <Content>[Content.text(context.toString())],
+        content: <Content>[Content.text(context.toString())],
       );
       final String? text = response.text;
       if (text == null || text.trim().isEmpty) {
@@ -182,6 +183,11 @@ Rules:
       );
     } catch (e) {
       debugPrint('Schedule assistant failed: $e');
+      if (isQuotaError(e)) {
+        throw const AssistantException(
+          'The AI has reached its free daily limit. Please try again tomorrow.',
+        );
+      }
       final String t = e.toString().replaceAll(RegExp(r'\s+'), ' ');
       throw AssistantException(
         'I couldn\'t reach the assistant (${t.length > 140 ? '${t.substring(0, 140)}…' : t}).',

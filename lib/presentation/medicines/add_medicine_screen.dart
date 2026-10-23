@@ -20,6 +20,7 @@ import '../../state/medications_provider.dart';
 import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
 import '../shared/motion_widgets.dart';
+import 'medicine_info_tabs.dart';
 
 enum _Freq { once, twice, thrice, asNeeded }
 
@@ -101,11 +102,11 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     setState(() {
       _error = null;
       _profile = null;
-      _looking = q.length >= 2;
+      _looking = q.length >= 3;
     });
-    if (q.length < 2) return;
+    if (q.length < 3) return;
     final int id = ++_lookupId;
-    _debounce = Timer(const Duration(milliseconds: 700), () async {
+    _debounce = Timer(const Duration(milliseconds: 1100), () async {
       final MedicineProfile p =
           await ref.read(medicineKnowledgeProvider).lookup(q);
       if (!mounted || id != _lookupId) return;
@@ -290,6 +291,13 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               updatedAt: now,
             )
           : null;
+
+      // Re-use what was looked up so the Info tab needs no second request.
+      if (p.recognized) {
+        await ref
+            .read(medicineKnowledgeProvider)
+            .remember(medicineLookupName(medication), p);
+      }
 
       await ref.read(medicationServiceProvider).save(
             medication: medication,
