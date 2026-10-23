@@ -27,10 +27,15 @@ class MedicineDraft {
     this.sourceText,
     this.confidence,
     Map<DraftField, String>? flags,
-  })  : times = times ?? <int>[],
+  })  : originalName = name,
+        times = times ?? <int>[],
         flags = flags ?? <DraftField, String>{};
 
   String name;
+
+  /// The name as read from the prescription. If the user changes [name] to a
+  /// different brand they bought, the original is kept as a "prescribed as" tag.
+  final String originalName;
   String? brandName;
   String? genericName;
   double? strength;
@@ -77,6 +82,13 @@ class MedicineDraft {
       if (times.isEmpty) problems.add('Choose at least one reminder time.');
     }
     return problems;
+  }
+
+  /// The tag to store: the prescription's name if it differs from [name].
+  String? get prescribedAsTag {
+    final String a = originalName.trim();
+    if (a.isEmpty || a.toLowerCase() == name.trim().toLowerCase()) return null;
+    return a;
   }
 
   /// Flags that are still open need an explicit "I checked this".

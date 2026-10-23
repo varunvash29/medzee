@@ -160,6 +160,10 @@ class _DetailState extends ConsumerState<_Detail> {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
+              if (medication.prescribedAs != null) ...<Widget>[
+                PrescribedAsTag(medication.prescribedAs!),
+                const SizedBox(height: AppSpacing.sm),
+              ],
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,

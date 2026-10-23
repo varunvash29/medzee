@@ -1460,6 +1460,17 @@ class $MedicationsTable extends Medications
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _prescribedAsMeta = const VerificationMeta(
+    'prescribedAs',
+  );
+  @override
+  late final GeneratedColumn<String> prescribedAs = GeneratedColumn<String>(
+    'prescribed_as',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _categoryMeta = const VerificationMeta(
     'category',
   );
@@ -1684,6 +1695,7 @@ class $MedicationsTable extends Medications
     name,
     genericName,
     brandName,
+    prescribedAs,
     category,
     form,
     strength,
@@ -1743,6 +1755,15 @@ class $MedicationsTable extends Medications
       context.handle(
         _brandNameMeta,
         brandName.isAcceptableOrUnknown(data['brand_name']!, _brandNameMeta),
+      );
+    }
+    if (data.containsKey('prescribed_as')) {
+      context.handle(
+        _prescribedAsMeta,
+        prescribedAs.isAcceptableOrUnknown(
+          data['prescribed_as']!,
+          _prescribedAsMeta,
+        ),
       );
     }
     if (data.containsKey('category')) {
@@ -1930,6 +1951,10 @@ class $MedicationsTable extends Medications
         DriftSqlType.string,
         data['${effectivePrefix}brand_name'],
       ),
+      prescribedAs: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prescribed_as'],
+      ),
       category:
           attachedDatabase.typeMapping.read(
             DriftSqlType.string,
@@ -2034,6 +2059,10 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
   final String name;
   final String? genericName;
   final String? brandName;
+
+  /// The name written on the prescription, when the medicine bought has a
+  /// different brand name (same salt). Shown as a tag.
+  final String? prescribedAs;
   final String category;
   final String form;
   final double? strength;
@@ -2059,6 +2088,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
     required this.name,
     this.genericName,
     this.brandName,
+    this.prescribedAs,
     required this.category,
     required this.form,
     this.strength,
@@ -2090,6 +2120,9 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
     }
     if (!nullToAbsent || brandName != null) {
       map['brand_name'] = Variable<String>(brandName);
+    }
+    if (!nullToAbsent || prescribedAs != null) {
+      map['prescribed_as'] = Variable<String>(prescribedAs);
     }
     map['category'] = Variable<String>(category);
     map['form'] = Variable<String>(form);
@@ -2146,6 +2179,10 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
           brandName == null && nullToAbsent
               ? const Value.absent()
               : Value(brandName),
+      prescribedAs:
+          prescribedAs == null && nullToAbsent
+              ? const Value.absent()
+              : Value(prescribedAs),
       category: Value(category),
       form: Value(form),
       strength:
@@ -2207,6 +2244,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
       name: serializer.fromJson<String>(json['name']),
       genericName: serializer.fromJson<String?>(json['genericName']),
       brandName: serializer.fromJson<String?>(json['brandName']),
+      prescribedAs: serializer.fromJson<String?>(json['prescribedAs']),
       category: serializer.fromJson<String>(json['category']),
       form: serializer.fromJson<String>(json['form']),
       strength: serializer.fromJson<double?>(json['strength']),
@@ -2237,6 +2275,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
       'name': serializer.toJson<String>(name),
       'genericName': serializer.toJson<String?>(genericName),
       'brandName': serializer.toJson<String?>(brandName),
+      'prescribedAs': serializer.toJson<String?>(prescribedAs),
       'category': serializer.toJson<String>(category),
       'form': serializer.toJson<String>(form),
       'strength': serializer.toJson<double?>(strength),
@@ -2265,6 +2304,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
     String? name,
     Value<String?> genericName = const Value.absent(),
     Value<String?> brandName = const Value.absent(),
+    Value<String?> prescribedAs = const Value.absent(),
     String? category,
     String? form,
     Value<double?> strength = const Value.absent(),
@@ -2290,6 +2330,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
     name: name ?? this.name,
     genericName: genericName.present ? genericName.value : this.genericName,
     brandName: brandName.present ? brandName.value : this.brandName,
+    prescribedAs: prescribedAs.present ? prescribedAs.value : this.prescribedAs,
     category: category ?? this.category,
     form: form ?? this.form,
     strength: strength.present ? strength.value : this.strength,
@@ -2319,6 +2360,10 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
       genericName:
           data.genericName.present ? data.genericName.value : this.genericName,
       brandName: data.brandName.present ? data.brandName.value : this.brandName,
+      prescribedAs:
+          data.prescribedAs.present
+              ? data.prescribedAs.value
+              : this.prescribedAs,
       category: data.category.present ? data.category.value : this.category,
       form: data.form.present ? data.form.value : this.form,
       strength: data.strength.present ? data.strength.value : this.strength,
@@ -2367,6 +2412,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
           ..write('name: $name, ')
           ..write('genericName: $genericName, ')
           ..write('brandName: $brandName, ')
+          ..write('prescribedAs: $prescribedAs, ')
           ..write('category: $category, ')
           ..write('form: $form, ')
           ..write('strength: $strength, ')
@@ -2397,6 +2443,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
     name,
     genericName,
     brandName,
+    prescribedAs,
     category,
     form,
     strength,
@@ -2426,6 +2473,7 @@ class MedicationRow extends DataClass implements Insertable<MedicationRow> {
           other.name == this.name &&
           other.genericName == this.genericName &&
           other.brandName == this.brandName &&
+          other.prescribedAs == this.prescribedAs &&
           other.category == this.category &&
           other.form == this.form &&
           other.strength == this.strength &&
@@ -2453,6 +2501,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
   final Value<String> name;
   final Value<String?> genericName;
   final Value<String?> brandName;
+  final Value<String?> prescribedAs;
   final Value<String> category;
   final Value<String> form;
   final Value<double?> strength;
@@ -2479,6 +2528,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
     this.name = const Value.absent(),
     this.genericName = const Value.absent(),
     this.brandName = const Value.absent(),
+    this.prescribedAs = const Value.absent(),
     this.category = const Value.absent(),
     this.form = const Value.absent(),
     this.strength = const Value.absent(),
@@ -2506,6 +2556,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
     required String name,
     this.genericName = const Value.absent(),
     this.brandName = const Value.absent(),
+    this.prescribedAs = const Value.absent(),
     required String category,
     required String form,
     this.strength = const Value.absent(),
@@ -2544,6 +2595,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
     Expression<String>? name,
     Expression<String>? genericName,
     Expression<String>? brandName,
+    Expression<String>? prescribedAs,
     Expression<String>? category,
     Expression<String>? form,
     Expression<double>? strength,
@@ -2571,6 +2623,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
       if (name != null) 'name': name,
       if (genericName != null) 'generic_name': genericName,
       if (brandName != null) 'brand_name': brandName,
+      if (prescribedAs != null) 'prescribed_as': prescribedAs,
       if (category != null) 'category': category,
       if (form != null) 'form': form,
       if (strength != null) 'strength': strength,
@@ -2600,6 +2653,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
     Value<String>? name,
     Value<String?>? genericName,
     Value<String?>? brandName,
+    Value<String?>? prescribedAs,
     Value<String>? category,
     Value<String>? form,
     Value<double?>? strength,
@@ -2627,6 +2681,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
       name: name ?? this.name,
       genericName: genericName ?? this.genericName,
       brandName: brandName ?? this.brandName,
+      prescribedAs: prescribedAs ?? this.prescribedAs,
       category: category ?? this.category,
       form: form ?? this.form,
       strength: strength ?? this.strength,
@@ -2665,6 +2720,9 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
     }
     if (brandName.present) {
       map['brand_name'] = Variable<String>(brandName.value);
+    }
+    if (prescribedAs.present) {
+      map['prescribed_as'] = Variable<String>(prescribedAs.value);
     }
     if (category.present) {
       map['category'] = Variable<String>(category.value);
@@ -2739,6 +2797,7 @@ class MedicationsCompanion extends UpdateCompanion<MedicationRow> {
           ..write('name: $name, ')
           ..write('genericName: $genericName, ')
           ..write('brandName: $brandName, ')
+          ..write('prescribedAs: $prescribedAs, ')
           ..write('category: $category, ')
           ..write('form: $form, ')
           ..write('strength: $strength, ')
@@ -12345,6 +12404,7 @@ typedef $$MedicationsTableCreateCompanionBuilder =
       required String name,
       Value<String?> genericName,
       Value<String?> brandName,
+      Value<String?> prescribedAs,
       required String category,
       required String form,
       Value<double?> strength,
@@ -12373,6 +12433,7 @@ typedef $$MedicationsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> genericName,
       Value<String?> brandName,
+      Value<String?> prescribedAs,
       Value<String> category,
       Value<String> form,
       Value<double?> strength,
@@ -12669,6 +12730,11 @@ class $$MedicationsTableFilterComposer
 
   ColumnFilters<String> get brandName => $composableBuilder(
     column: $table.brandName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get prescribedAs => $composableBuilder(
+    column: $table.prescribedAs,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13056,6 +13122,11 @@ class $$MedicationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get prescribedAs => $composableBuilder(
+    column: $table.prescribedAs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get category => $composableBuilder(
     column: $table.category,
     builder: (column) => ColumnOrderings(column),
@@ -13179,6 +13250,11 @@ class $$MedicationsTableAnnotationComposer
 
   GeneratedColumn<String> get brandName =>
       $composableBuilder(column: $table.brandName, builder: (column) => column);
+
+  GeneratedColumn<String> get prescribedAs => $composableBuilder(
+    column: $table.prescribedAs,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
@@ -13557,6 +13633,7 @@ class $$MedicationsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> genericName = const Value.absent(),
                 Value<String?> brandName = const Value.absent(),
+                Value<String?> prescribedAs = const Value.absent(),
                 Value<String> category = const Value.absent(),
                 Value<String> form = const Value.absent(),
                 Value<double?> strength = const Value.absent(),
@@ -13583,6 +13660,7 @@ class $$MedicationsTableTableManager
                 name: name,
                 genericName: genericName,
                 brandName: brandName,
+                prescribedAs: prescribedAs,
                 category: category,
                 form: form,
                 strength: strength,
@@ -13611,6 +13689,7 @@ class $$MedicationsTableTableManager
                 required String name,
                 Value<String?> genericName = const Value.absent(),
                 Value<String?> brandName = const Value.absent(),
+                Value<String?> prescribedAs = const Value.absent(),
                 required String category,
                 required String form,
                 Value<double?> strength = const Value.absent(),
@@ -13637,6 +13716,7 @@ class $$MedicationsTableTableManager
                 name: name,
                 genericName: genericName,
                 brandName: brandName,
+                prescribedAs: prescribedAs,
                 category: category,
                 form: form,
                 strength: strength,

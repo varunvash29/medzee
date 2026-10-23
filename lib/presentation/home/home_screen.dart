@@ -247,6 +247,10 @@ class _NextDoseCard extends ConsumerWidget {
                       '${_doseLabel(e.dose, m)} · ${_time(context, e.dose)}',
                       style: theme.textTheme.bodyMedium,
                     ),
+                    if (m.prescribedAs != null) ...<Widget>[
+                      const SizedBox(height: 4),
+                      PrescribedAsTag(m.prescribedAs!),
+                    ],
                   ],
                 ),
               ),
@@ -590,7 +594,9 @@ class _DoseRow extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      _doseLabel(d, m),
+                      m.prescribedAs == null
+                          ? _doseLabel(d, m)
+                          : '${_doseLabel(d, m)} · Rx: ${m.prescribedAs}',
                       style: theme.textTheme.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

@@ -244,6 +244,10 @@ class _MedicineRow extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (medication.prescribedAs != null) ...<Widget>[
+                    const SizedBox(height: AppSpacing.sm),
+                    PrescribedAsTag(medication.prescribedAs!),
+                  ],
                   if (times.isNotEmpty) ...<Widget>[
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(

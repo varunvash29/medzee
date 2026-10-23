@@ -142,6 +142,7 @@ class _ScanPrescriptionScreenState
       name: d.name.trim(),
       genericName: d.genericName,
       brandName: d.brandName,
+      prescribedAs: d.prescribedAsTag,
       form: d.form ?? DosageForm.tablet,
       strength: d.strength,
       strengthUnit: d.strengthUnit ?? 'mg',

@@ -445,3 +445,46 @@ class ThinProgress extends StatelessWidget {
     );
   }
 }
+
+
+/// "Prescribed as X": marks a medicine bought under a different brand than the
+/// one written on the prescription (same salt), so you know what it is for.
+class PrescribedAsTag extends StatelessWidget {
+  const PrescribedAsTag(this.name, {super.key});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 13,
+            color: theme.colorScheme.onTertiaryContainer,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              'Prescribed as $name',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onTertiaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 /// Schema version. Bump this whenever [AppDatabase.migration] changes.
-const int kDatabaseSchemaVersion = 2;
+const int kDatabaseSchemaVersion = 3;
 
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
@@ -39,6 +39,10 @@ class Medications extends Table {
   TextColumn get name => text()();
   TextColumn get genericName => text().nullable()();
   TextColumn get brandName => text().nullable()();
+
+  /// The name written on the prescription, when the medicine bought has a
+  /// different brand name (same salt). Shown as a tag.
+  TextColumn get prescribedAs => text().nullable()();
   TextColumn get category => text()();
   TextColumn get form => text()();
   RealColumn get strength => real().nullable()();

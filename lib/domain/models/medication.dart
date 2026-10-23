@@ -11,6 +11,7 @@ class Medication {
     required this.name,
     this.genericName,
     this.brandName,
+    this.prescribedAs,
     this.category = MedicineCategory.other,
     this.form = DosageForm.tablet,
     this.strength,
@@ -39,6 +40,10 @@ class Medication {
   final String name;
   final String? genericName;
   final String? brandName;
+
+  /// The name on the prescription when what was bought is a different brand
+  /// of the same salt. Null when they are the same.
+  final String? prescribedAs;
   final MedicineCategory category;
   final DosageForm form;
 
@@ -95,6 +100,8 @@ class Medication {
     bool clearGenericName = false,
     String? brandName,
     bool clearBrandName = false,
+    String? prescribedAs,
+    bool clearPrescribedAs = false,
     MedicineCategory? category,
     DosageForm? form,
     double? strength,
@@ -130,6 +137,8 @@ class Medication {
       name: name ?? this.name,
       genericName: clearGenericName ? null : (genericName ?? this.genericName),
       brandName: clearBrandName ? null : (brandName ?? this.brandName),
+      prescribedAs:
+          clearPrescribedAs ? null : (prescribedAs ?? this.prescribedAs),
       category: category ?? this.category,
       form: form ?? this.form,
       strength: clearStrength ? null : (strength ?? this.strength),

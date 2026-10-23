@@ -34,7 +34,16 @@ class GeminiMedicineKnowledge implements MedicineKnowledge {
 
   final bool available;
 
-  static const Duration cacheFor = Duration(days: 30);
+  /// Medicine facts rarely change, so keep them for a long time.
+  static const Duration cacheFor = Duration(days: 180);
+
+  /// A name the AI did not recognise is remembered briefly so a typo is not
+  /// re-asked on every keystroke pause.
+  static const Duration negativeCacheFor = Duration(days: 1);
+
+  /// Lookups already running, so the same name is never requested twice at once.
+  final Map<String, Future<MedicineProfile>> _inFlight =
+      <String, Future<MedicineProfile>>{};
   static const String _prefix = 'medicine_profile_v1:';
 
   @override
@@ -144,14 +153,21 @@ Rules:
         ],
       );
 
-  static String _key(String name) =>
-      '$_prefix${name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ')}';
+  /// "Dolo 650", "dolo650" and "Dolo 650 mg" all share one cache entry.
+  @visibleForTesting
+  static String cacheKey(String name) {
+    final String t = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'(?<=\d)\s*(mg|mcg|µg|ug|g|ml|iu)\b'), '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return '$_prefix$t';
+  }
 
   @override
   Future<void> remember(String name, MedicineProfile profile) async {
     if (!profile.recognized) return;
     final SharedPreferences? prefs = await _prefs();
-    await prefs?.setString(_key(name), jsonEncode(profile.toJson()));
+    await prefs?.setString(cacheKey(name), jsonEncode(profile.toJson()));
   }
 
   @override
@@ -167,23 +183,40 @@ Rules:
   }
 
   @override
-  Future<MedicineProfile> lookup(String name) async {
+  Future<MedicineProfile> lookup(String name) {
     final String q = name.trim();
-    if (q.length < 2) return MedicineProfile.unknown;
+    if (q.length < 2) return Future<MedicineProfile>.value(MedicineProfile.unknown);
+    final String key = cacheKey(q);
+    return _inFlight.putIfAbsent(
+      key,
+      () => _lookup(q, key).whenComplete(() {
+        // A block body: returning the removed future would make this wait
+        // on itself forever.
+        _inFlight.remove(key);
+      }),
+    );
+  }
 
+  Future<MedicineProfile> _lookup(String q, String key) async {
     final SharedPreferences? prefs = await _prefs();
-    final String? cached = prefs?.getString(_key(q));
+
+    MedicineProfile? stale;
+    final String? cached = prefs?.getString(key);
     if (cached != null) {
       try {
         final MedicineProfile p =
             MedicineProfile.fromJson(jsonDecode(cached) as Map<String, dynamic>);
         final DateTime? at = p.fetchedAt;
-        if (at != null && DateTime.now().difference(at) < cacheFor) return p;
+        final Duration ttl = p.recognized ? cacheFor : negativeCacheFor;
+        if (at != null && DateTime.now().difference(at) < ttl) {
+          return p.recognized ? p : MedicineProfile.unknown;
+        }
+        if (p.recognized) stale = p; // usable if a refresh fails
       } catch (_) {
         // Fall through to a fresh lookup.
       }
     }
-    if (!available) return MedicineProfile.unknown;
+    if (!available) return stale ?? MedicineProfile.unknown;
 
     try {
       final GenerateContentResponse r = await generateWithFallback(
@@ -205,13 +238,24 @@ Rules:
         r.text ?? '',
         queriedName: q,
       );
-      if (profile.recognized) {
-        await prefs?.setString(_key(q), jsonEncode(profile.toJson()));
-      }
+      await prefs?.setString(
+        key,
+        jsonEncode(
+          profile.recognized
+              ? profile.toJson()
+              : MedicineProfile(
+                  recognized: false,
+                  name: '',
+                  fetchedAt: DateTime.now(),
+                ).toJson(),
+        ),
+      );
       return profile;
     } catch (e) {
+      // Quota or network trouble is never cached as "unknown": serve an old
+      // copy if there is one, otherwise report nothing found.
       debugPrint('Medicine lookup failed: $e');
-      return MedicineProfile.unknown;
+      return stale ?? MedicineProfile.unknown;
     }
   }
 

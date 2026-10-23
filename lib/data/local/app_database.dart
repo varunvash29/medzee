@@ -51,6 +51,7 @@ class AppDatabase extends _$AppDatabase {
           for (int step = from; step < to; step++) {
             await switch (step + 1) {
               2 => _migrateToV2(m),
+              3 => _migrateToV3(m),
               _ => m.createAll(),
             };
           }
@@ -85,6 +86,11 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_phases_medication '
       'ON schedule_phases (medication_id, phase_order)',
     );
+  }
+
+  /// v3: the "prescribed as" tag on medicines.
+  Future<void> _migrateToV3(Migrator m) async {
+    await m.addColumn(medications, medications.prescribedAs);
   }
 
   /// v2: the schedule assistant's audit log.

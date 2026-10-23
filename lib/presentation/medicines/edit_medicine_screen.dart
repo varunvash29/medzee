@@ -34,6 +34,7 @@ class _EditMedicineScreenState extends ConsumerState<EditMedicineScreen> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _strength = TextEditingController();
   final TextEditingController _notes = TextEditingController();
+  final TextEditingController _prescribedAs = TextEditingController();
 
   late DosageForm _form;
   late String _unit;
@@ -63,6 +64,7 @@ class _EditMedicineScreenState extends ConsumerState<EditMedicineScreen> {
     _name.dispose();
     _strength.dispose();
     _notes.dispose();
+    _prescribedAs.dispose();
     super.dispose();
   }
 
@@ -86,6 +88,7 @@ class _EditMedicineScreenState extends ConsumerState<EditMedicineScreen> {
       _name.text = m.name;
       _strength.text = m.strength == null ? '' : _fmt(m.strength!);
       _notes.text = m.instructions ?? '';
+      _prescribedAs.text = m.prescribedAs ?? '';
       _form = m.form;
       _unit = m.strengthUnit;
       _route = m.route;
@@ -172,6 +175,10 @@ class _EditMedicineScreenState extends ConsumerState<EditMedicineScreen> {
         foodInstruction: _food,
         instructions: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         clearInstructions: _notes.text.trim().isEmpty,
+        prescribedAs: _prescribedAs.text.trim(),
+        clearPrescribedAs: _prescribedAs.text.trim().isEmpty ||
+            _prescribedAs.text.trim().toLowerCase() ==
+                _name.text.trim().toLowerCase(),
         isAsNeeded: _asNeeded,
         endDate: end,
         clearEndDate: end == null,
@@ -270,6 +277,16 @@ class _EditMedicineScreenState extends ConsumerState<EditMedicineScreen> {
               controller: _name,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(labelText: 'Medicine name'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _prescribedAs,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Prescribed as (optional)',
+                helperText: 'If the prescription names a different brand '
+                    'of the same salt',
+              ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text('Schedule', style: theme.textTheme.titleMedium),

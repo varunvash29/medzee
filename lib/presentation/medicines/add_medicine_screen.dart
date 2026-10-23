@@ -38,6 +38,8 @@ class AddMedicineScreen extends ConsumerStatefulWidget {
 class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _stock = TextEditingController();
+  final TextEditingController _prescribedAs = TextEditingController();
+  bool _showPrescribedAs = false;
   Timer? _debounce;
   int _lookupId = 0;
   bool _looking = false;
@@ -73,6 +75,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
     _debounce?.cancel();
     _name.dispose();
     _stock.dispose();
+    _prescribedAs.dispose();
     super.dispose();
   }
 
@@ -219,6 +222,13 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
   static String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
+  /// The tag to store, only when it differs from the medicine's own name.
+  String? _prescribedTag() {
+    final String t = _prescribedAs.text.trim();
+    if (!_showPrescribedAs || t.isEmpty) return null;
+    return t.toLowerCase() == _name.text.trim().toLowerCase() ? null : t;
+  }
+
   Future<void> _save() async {
     if (_busy || !_canSave) return;
     final double? stock = double.tryParse(_stock.text.trim());
@@ -242,6 +252,7 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
             ? p.name
             : (typed.name.isEmpty ? _name.text.trim() : typed.name),
         genericName: p.genericName,
+        prescribedAs: _prescribedTag(),
         category: p.category ?? MedicineCategory.other,
         form: _form,
         strength: _strength,
@@ -375,6 +386,26 @@ class _AddMedicineScreenState extends ConsumerState<AddMedicineScreen> {
               ),
             ),
             _detected(theme),
+            const SizedBox(height: AppSpacing.sm),
+            if (!_showPrescribedAs)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _showPrescribedAs = true),
+                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                  label: const Text('Prescription says a different name?'),
+                ),
+              )
+            else
+              TextField(
+                controller: _prescribedAs,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Name on the prescription',
+                  hintText: 'e.g. Glycomet 500',
+                  helperText: 'Shown as a tag so you know what it is for',
+                ),
+              ),
             const SizedBox(height: AppSpacing.xl),
             _label('How often?'),
             SegmentedButton<_Freq>(
