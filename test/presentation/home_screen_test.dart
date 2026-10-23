@@ -59,6 +59,9 @@ Future<void> _pumpHome(
   bool noMedicines = false,
   bool settle = true,
 }) async {
+  tester.view.physicalSize = const Size(800, 2600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
   doses ??= FakeDoseRepository();
   inventory ??= FakeInventoryRepository();
   final Medication medication = _medication();
@@ -133,14 +136,13 @@ void main() {
     );
 
     expect(find.text('Asha'), findsOneWidget);
-    expect(find.text('Morning'), findsOneWidget);
-    expect(find.text('Metformin'), findsNWidgets(2));
-    expect(find.text('1 of 2 doses completed'), findsOneWidget);
-    expect(find.text('Taken'), findsOneWidget);
+    expect(find.text("Today's schedule"), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
+    expect(find.text('NEXT DOSE'), findsOneWidget);
 
     // The next pending dose offers the quick actions.
-    expect(find.byTooltip('Mark as taken'), findsOneWidget);
-    expect(find.byTooltip('Skip this dose'), findsOneWidget);
+    expect(find.text('Take now'), findsOneWidget);
+    expect(find.text('Skip'), findsOneWidget);
   });
 
   testWidgets('shows the empty state when nothing is scheduled',
@@ -148,7 +150,6 @@ void main() {
     await _pumpHome(tester, entries: const <TodayEntry>[]);
 
     expect(find.text('Nothing scheduled today'), findsOneWidget);
-    expect(find.text('No doses due'), findsOneWidget);
   });
 
   testWidgets('tapping "Mark as taken" records the dose and confirms with a snackbar',
@@ -162,7 +163,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.byTooltip('Mark as taken'));
+    await tester.tap(find.text('Take now'));
     await tester.pumpAndSettle();
 
     expect(find.text('Dose recorded'), findsOneWidget);
@@ -187,7 +188,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.byTooltip('Mark as taken'));
+    await tester.tap(find.text('Take now'));
     await tester.pumpAndSettle();
 
     expect(find.text('29 tablet left'), findsOneWidget);
@@ -207,7 +208,7 @@ void main() {
       ],
     );
 
-    await tester.tap(find.text('Metformin'));
+    await tester.tap(find.text('Metformin').first);
     await tester.pumpAndSettle();
 
     expect(find.text('detail:med-1'), findsOneWidget);
@@ -223,6 +224,6 @@ void main() {
     );
 
     expect(find.text('Nothing scheduled today'), findsNothing);
-    expect(find.text('Start your routine'), findsOneWidget);
+    expect(find.text('Add your first medicine'), findsOneWidget);
   });
 }

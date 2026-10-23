@@ -6,6 +6,8 @@ import 'package:medzee/core/theme/app_theme.dart';
 import 'package:medzee/domain/models/core_enums.dart';
 import 'package:medzee/domain/models/inventory.dart';
 import 'package:medzee/domain/models/medication.dart';
+import 'package:medzee/domain/models/medicine_profile.dart';
+import 'package:medzee/services/ai/medicine_knowledge.dart';
 import 'package:medzee/presentation/medicines/add_medicine_screen.dart';
 import 'package:medzee/services/medication_service.dart';
 import 'package:medzee/state/providers.dart';
@@ -63,12 +65,35 @@ class _RecordingMedicationService implements MedicationService {
       throw UnimplementedError();
 }
 
-/// Pumps the wizard as the first route, with a recording medication service.
+/// Pretends Gemini recognised "Dolo 650" so the form fills itself in.
+class _FakeKnowledge implements MedicineKnowledge {
+  @override
+  bool get isAvailable => true;
+
+  @override
+  MedicineProfile offlineGuess(String name) =>
+      MedicineProfile(recognized: false, name: name);
+
+  @override
+  Future<MedicineProfile> lookup(String name) async => MedicineProfile(
+        recognized: true,
+        name: 'Dolo 650',
+        genericName: 'Paracetamol',
+        form: DosageForm.tablet,
+        strength: 650,
+        strengthUnit: 'mg',
+        route: AdministrationRoute.oral,
+        food: FoodInstruction.afterFood,
+        category: MedicineCategory.painRelief,
+      );
+}
+
+/// Pumps the screen as the first route, with a recording medication service.
 ///
 /// The surface is made tall enough that the whole identity step (including
 /// the PRN switch near the bottom) is on screen without scrolling.
 Future<_RecordingMedicationService> _pumpWizard(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(800, 1400);
+  tester.view.physicalSize = const Size(800, 2000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -93,6 +118,7 @@ Future<_RecordingMedicationService> _pumpWizard(WidgetTester tester) async {
     ProviderScope(
       overrides: <Override>[
         medicationServiceProvider.overrideWithValue(service),
+        medicineKnowledgeProvider.overrideWithValue(_FakeKnowledge()),
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -104,102 +130,72 @@ Future<_RecordingMedicationService> _pumpWizard(WidgetTester tester) async {
   return service;
 }
 
-/// Fills the name field and advances past step 1 (About the medicine).
-Future<void> _advancePastIdentity(WidgetTester tester) async {
-  await tester.enterText(find.byType(TextField).first, 'Metformin');
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Continue'));
-  await tester.pumpAndSettle();
-}
-
 void main() {
-  testWidgets('Continue stays disabled until the medicine name is entered',
+  testWidgets('Add medicine stays disabled until a name is typed',
       (WidgetTester tester) async {
-    await _pumpWizard(tester);
-    expect(find.text('About the medicine'), findsOneWidget);
+    final _RecordingMedicationService service = await _pumpWizard(tester);
 
-    // Empty name: the tap is ignored and the wizard stays put.
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Add medicine').last);
     await tester.pumpAndSettle();
-    expect(find.text('About the medicine'), findsOneWidget);
+    expect(service.savedMedications, isEmpty);
 
     await tester.enterText(find.byType(TextField).first, 'Metformin');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-    expect(find.text('How and when'), findsOneWidget);
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Add medicine'))
+          .onPressed,
+      isNotNull,
+    );
   });
 
-  testWidgets('the close button steps back instead of leaving mid-wizard',
-      (WidgetTester tester) async {
-    await _pumpWizard(tester);
-    await _advancePastIdentity(tester);
-    expect(find.text('How and when'), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.close_rounded));
-    await tester.pumpAndSettle();
-    expect(find.text('About the medicine'), findsOneWidget);
-  });
-
-  testWidgets('the schedule step offers fixed-schedule kinds by default',
-      (WidgetTester tester) async {
-    await _pumpWizard(tester);
-    await _advancePastIdentity(tester);
-
-    // No PRN: the schedule kind chooser is visible on step 2.
-    expect(find.text('How and when'), findsOneWidget);
-    expect(find.text('Every day'), findsOneWidget);
-  });
-
-  testWidgets('enabling PRN hides the fixed-schedule choices',
+  testWidgets('typing a name fills in the details automatically',
       (WidgetTester tester) async {
     await _pumpWizard(tester);
 
-    // The PRN toggle lives on the identity step.
-    await tester.enterText(find.byType(TextField).first, 'Metformin');
-    await tester.tap(find.text('Take as needed (PRN)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue'));
+    await tester.enterText(find.byType(TextField).first, 'Dolo 650');
+    await tester.pump(const Duration(milliseconds: 900));
     await tester.pumpAndSettle();
 
-    expect(find.text('How and when'), findsOneWidget);
-    expect(find.text('Every day'), findsNothing);
-    // The time editor is hidden too — PRN has no reminder times to edit.
-    expect(find.text('Add time'), findsNothing);
+    expect(find.text('Tablet'), findsOneWidget);
+    expect(find.text('650 mg'), findsOneWidget);
+    expect(find.text('Usually taken after food'), findsOneWidget);
+  });
+
+  testWidgets('saving uses the inferred details and the chosen schedule',
+      (WidgetTester tester) async {
+    final _RecordingMedicationService service = await _pumpWizard(tester);
+
+    await tester.enterText(find.byType(TextField).first, 'Dolo 650');
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Twice'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add medicine').last);
+    await tester.pumpAndSettle();
+
+    expect(service.savedMedications, hasLength(1));
+    final Medication saved = service.savedMedications.single;
+    expect(saved.name, 'Dolo 650');
+    expect(saved.form, DosageForm.tablet);
+    expect(saved.strength, 650);
+    expect(saved.foodInstruction, FoodInstruction.afterFood);
+    expect(service.savedPhases.single.single.timesMinutes, <int>[480, 1200]);
   });
 
   testWidgets('an as-needed medicine saves with no fixed reminder times',
       (WidgetTester tester) async {
     final _RecordingMedicationService service = await _pumpWizard(tester);
 
-    // Turn on PRN on the identity step, then walk through the schedule and
-    // Stock (prefilled) steps to Review.
-    await tester.enterText(find.byType(TextField).first, 'Metformin');
-    await tester.tap(find.text('Take as needed (PRN)'));
+    await tester.enterText(find.byType(TextField).first, 'Dolo 650');
+    await tester.pump(const Duration(milliseconds: 900));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue')); // -> How and when
+    await tester.tap(find.text('Only when needed'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue')); // -> Stock
-    await tester.pumpAndSettle();
-    expect(find.text('Stock'), findsWidgets);
-
-    await tester.tap(find.text('Continue')); // -> Review
-    await tester.pumpAndSettle();
-    expect(find.text('Review'), findsOneWidget);
-
-    await tester.tap(find.text('Save medicine'));
+    await tester.tap(find.text('Add medicine').last);
     await tester.pumpAndSettle();
 
-    // Regression: the wizard used to keep the default 08:00 time on the PRN
-    // phase, which the validator (rightly) rejected — with no way for the
-    // user to fix it, since the time editor is hidden for PRN.
-    expect(
-      find.text('As-needed medicines do not have fixed reminder times.'),
-      findsNothing,
-    );
-    expect(service.savedMedications, hasLength(1));
     expect(service.savedMedications.single.isAsNeeded, isTrue);
     expect(service.savedPhases.single.single.timesMinutes, isEmpty);
-    expect(service.savedPhases.single.single.kind, ScheduleKind.asNeeded);
   });
 }

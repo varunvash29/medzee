@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../domain/models/user_profile.dart';
@@ -30,34 +29,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final TextEditingController _nameController = TextEditingController();
 
   int _page = 0;
+  static const int _pageCount = 3;
   bool _busy = false;
-
-  static const List<_OnboardingPage> _pages = <_OnboardingPage>[
-    _OnboardingPage(
-      icon: Icons.notifications_active_outlined,
-      title: 'Never miss a dose',
-      body:
-          'Medzee reminds you when a dose is due, keeps a precise log of what '
-          'you took, and tells you honestly when something was missed. '
-          'Reminders keep working across timezone changes.',
-    ),
-    _OnboardingPage(
-      icon: Icons.inventory_2_outlined,
-      title: 'Know what is left',
-      body:
-          'Stock is tracked dose by dose with a full audit trail. Medzee '
-          'warns you before you run out, and never guesses when it cannot '
-          'convert between units.',
-    ),
-    _OnboardingPage(
-      icon: Icons.health_and_safety_outlined,
-      title: 'No advice, ever',
-      body:
-          'Medzee does not prescribe, diagnose or invent clinical facts. '
-          'Medicine information is shown with its source and date, and you '
-          'stay in control of every decision.',
-    ),
-  ];
 
   @override
   void dispose() {
@@ -129,76 +102,66 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final bool isLast = _page >= _pages.length;
+    final bool isLast = _page == _pageCount - 1;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xxl,
-                AppSpacing.md,
-                AppSpacing.md,
-                0,
-              ),
-              child: Row(
-                children: <Widget>[
-                  MedzeeMark.tile(size: 34),
-                  const SizedBox(width: AppSpacing.sm),
-                  const MedzeeWordmark(fontSize: 20),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _busy ? null : _joinWithCode,
-                    child: const Text('Have a code?'),
-                  ),
-                  TextButton(
-                    onPressed: _busy ? null : _finish,
-                    child: const Text('Skip'),
-                  ),
-                ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: TextButton(
+                  onPressed: _busy || isLast ? null : _finish,
+                  child: Text(isLast ? '' : 'Skip'),
+                ),
               ),
             ),
             Expanded(
               child: PageView(
                 controller: _controller,
-                onPageChanged: (int value) => setState(() => _page = value),
+                onPageChanged: (int v) => setState(() => _page = v),
                 children: <Widget>[
-                  ..._pages.map((_OnboardingPage page) => _PageView(page: page)),
+                  const _WelcomePage(),
+                  const _FeaturesPage(),
                   _NamePage(controller: _nameController),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.gutter),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                0,
+                AppSpacing.gutter,
+                AppSpacing.lg,
+              ),
               child: Column(
                 children: <Widget>[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      for (int i = 0; i <= _pages.length; i++)
+                      for (int i = 0; i < _pageCount; i++)
                         AnimatedContainer(
                           duration: AppMotion.medium,
                           curve: AppMotion.standard,
-                          width: i == _page ? 24 : 8,
+                          width: i == _page ? 22 : 8,
                           height: 8,
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xs,
-                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
                           decoration: BoxDecoration(
                             color: i == _page
                                 ? theme.colorScheme.primary
                                 : theme.colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(
-                              AppRadii.full,
-                            ),
+                            borderRadius: BorderRadius.circular(AppRadii.full),
                           ),
                         ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   AppPrimaryButton(
-                    label: isLast ? 'Start using Medzee' : 'Continue',
+                    label: isLast
+                        ? 'Start using Medzee'
+                        : (_page == 0 ? 'Get started' : 'Next'),
                     busy: _busy,
                     onPressed: () {
                       if (isLast) {
@@ -211,6 +174,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       );
                     },
                   ),
+                  if (_page == 0)
+                    TextButton(
+                      onPressed: _busy ? null : _joinWithCode,
+                      child: const Text('I already use Medzee on another device'),
+                    ),
                 ],
               ),
             ),
@@ -221,22 +189,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
-class _OnboardingPage {
-  const _OnboardingPage({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-}
-
-class _PageView extends StatelessWidget {
-  const _PageView({required this.page});
-
-  final _OnboardingPage page;
+class _WelcomePage extends StatelessWidget {
+  const _WelcomePage();
 
   @override
   Widget build(BuildContext context) {
@@ -245,45 +199,94 @@ class _PageView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 112,
-            height: 112,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(36),
-            ),
-            child: Icon(
-              page.icon,
-              size: 52,
-              color: theme.colorScheme.primary,
-            ),
-          )
+          MedzeeMark.tile(size: 112)
               .animate()
               .scale(
-                begin: const Offset(0.8, 0.8),
+                begin: const Offset(0.85, 0.85),
                 end: const Offset(1, 1),
                 duration: AppMotion.medium,
                 curve: AppMotion.enter,
               )
-              .then()
-              .shimmer(
-                duration: const Duration(milliseconds: 700),
-                color: AppColors.brandBright.withValues(alpha: 0.25),
+              .fadeIn(),
+          const SizedBox(height: AppSpacing.xl),
+          const MedzeeWordmark(fontSize: 38),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Your medicines, sorted.',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturesPage extends StatelessWidget {
+  const _FeaturesPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    Widget row(IconData icon, String title, String body) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: theme.colorScheme.primary),
               ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(title, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(body, style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'A healthier you,\none reminder at a time',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xxl),
-          Text(page.title, style: theme.textTheme.headlineMedium)
-              .animate()
-              .fadeIn(duration: AppMotion.medium, delay: 80.ms)
-              .slideY(begin: 0.15, curve: AppMotion.enter),
-          const SizedBox(height: AppSpacing.md),
-          Text(page.body, style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ))
-              .animate()
-              .fadeIn(duration: AppMotion.medium, delay: 160.ms)
-              .slideY(begin: 0.1, curve: AppMotion.enter),
+          row(
+            Icons.notifications_active_outlined,
+            'Never miss a dose',
+            'Reminders that work even offline.',
+          ),
+          row(
+            Icons.document_scanner_outlined,
+            'Scan prescriptions',
+            'Add your medicines from a photo.',
+          ),
+          row(
+            Icons.auto_awesome_outlined,
+            'Just type the name',
+            'Medzee fills in strength, form and Indian brand alternatives.',
+          ),
         ],
       ),
     );
@@ -304,28 +307,32 @@ class _NamePage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('What should we call you?', style: theme.textTheme.headlineMedium),
+          Text(
+            'What should we call you?',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Optional — used only for the greeting on your home screen. '
-            'Everything stays on this device.',
-            style: theme.textTheme.bodyLarge
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            'Optional. Used only for your greeting.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
           TextField(
             controller: controller,
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(
-              labelText: 'Preferred name',
-              hintText: 'e.g. Alex',
+              labelText: 'Your name',
+              hintText: 'e.g. Asha',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           const InfoBanner(
-            message:
-                'Medzee stores your data locally on this device. It does not '
-                'send your medicine list anywhere.',
+            message: 'Your medicines stay on this device unless you turn on '
+                'cloud sync in Profile.',
             icon: Icons.lock_outline_rounded,
           ),
         ],

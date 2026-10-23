@@ -95,7 +95,7 @@ class AppCard extends StatelessWidget {
         ),
       ),
       child: onTap == null
-          ? content
+          ? Material(color: Colors.transparent, child: content)
           : Material(
               color: Colors.transparent,
               child: InkWell(

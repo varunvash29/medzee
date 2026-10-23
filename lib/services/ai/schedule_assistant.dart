@@ -1,4 +1,5 @@
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../domain/models/schedule_proposal.dart';
@@ -36,7 +37,7 @@ class GeminiScheduleAssistant implements ScheduleAssistant {
 
   final bool available;
 
-  static const String modelName = 'gemini-2.5-flash';
+  static const String modelName = 'gemini-3.5-flash';
 
   @override
   bool get isAvailable => available;
@@ -179,9 +180,11 @@ Rules:
       throw const AssistantException(
         'I couldn\'t understand my own answer. Could you rephrase that?',
       );
-    } catch (_) {
-      throw const AssistantException(
-        'I couldn\'t reach the assistant. Check your connection and try again.',
+    } catch (e) {
+      debugPrint('Schedule assistant failed: $e');
+      final String t = e.toString().replaceAll(RegExp(r'\s+'), ' ');
+      throw AssistantException(
+        'I couldn\'t reach the assistant (${t.length > 140 ? '${t.substring(0, 140)}…' : t}).',
       );
     }
   }

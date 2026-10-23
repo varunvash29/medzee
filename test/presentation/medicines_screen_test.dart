@@ -61,6 +61,9 @@ Future<void> _pumpLibrary(
           inventoryProvider(medication.id).overrideWith(
             (Ref ref) => Stream<Inventory?>.value(stock[medication.id]),
           ),
+          phasesProvider(medication.id).overrideWith(
+            (Ref ref) => Stream<List<SchedulePhase>>.value(const <SchedulePhase>[]),
+          ),
           medicationAdherenceProvider(medication.id).overrideWith(
             (Ref ref) async => const MedicationAdherence(
               taken: 9,
@@ -91,7 +94,7 @@ List<Medication> _fixtures() => <Medication>[
     ];
 
 void main() {
-  testWidgets('shows active medicines with stock and adherence chips',
+  testWidgets('shows active medicines and hides paused ones',
       (WidgetTester tester) async {
     await _pumpLibrary(
       tester,
@@ -113,8 +116,8 @@ void main() {
     expect(find.text('Amoxicillin'), findsOneWidget);
     expect(find.text('Lisinopril'), findsNothing); // paused: not in default tab
 
-    expect(find.text('30 tablet'), findsOneWidget);
-    expect(find.text('90% taken'), findsWidgets);
+    // Plenty of stock: no low-stock pill.
+    expect(find.textContaining('left'), findsNothing);
   });
 
   testWidgets('search narrows by name or active ingredient',

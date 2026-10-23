@@ -19,6 +19,9 @@ import 'notification_service.dart';
 class FirebaseGateway {
   const FirebaseGateway._(this._initialized);
 
+  /// A gateway with no Firebase, for tests and previews.
+  const FirebaseGateway.unavailable() : _initialized = false;
+
   final bool _initialized;
 
   /// Whether a usable Firebase app exists on this install.

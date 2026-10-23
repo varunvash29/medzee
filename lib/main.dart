@@ -65,8 +65,14 @@ Future<void> main() async {
   final GoRouter router = createAppRouter(
     rootNavigatorKey: navigatorKey,
     initialLocation: initialLocation,
-    isOnboardingComplete: () =>
-        container.read(activeProfileProvider).onboardingCompleted,
+    // Until the profile stream has emitted, trust the value read from the
+    // database above. Falling back to the default profile here would send a
+    // returning user back to onboarding on every launch.
+    isOnboardingComplete: () {
+      final AsyncValue<UserProfile?> live = container.read(profileProvider);
+      if (live.hasValue) return live.value?.onboardingCompleted ?? false;
+      return storedProfile?.onboardingCompleted ?? false;
+    },
   );
 
   // Route notification action taps into the router. The handler survives

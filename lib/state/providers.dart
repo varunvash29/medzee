@@ -13,6 +13,8 @@ import '../domain/repositories/notification_schedule_repository.dart';
 import '../domain/repositories/profile_repository.dart';
 import '../domain/services/local_time_converter.dart';
 import '../services/dose_service.dart';
+import '../domain/models/medicine_profile.dart';
+import '../services/ai/medicine_knowledge.dart';
 import '../services/ai/prescription_extractor.dart';
 import '../services/ai/schedule_assistant.dart';
 import '../services/schedule_change_service.dart';
@@ -202,4 +204,19 @@ final Provider<ScheduleChangeService> scheduleChangeServiceProvider =
     inventory: ref.watch(inventoryRepositoryProvider),
     medicationService: ref.watch(medicationServiceProvider),
   ),
+);
+
+/// What a medicine is, inferred from its name (India-focused).
+final Provider<MedicineKnowledge> medicineKnowledgeProvider =
+    Provider<MedicineKnowledge>(
+  (Ref ref) => GeminiMedicineKnowledge(
+    available: ref.watch(firebaseGatewayProvider).isAvailable,
+  ),
+);
+
+/// The profile for one medicine name, cached per name.
+final FutureProviderFamily<MedicineProfile, String> medicineProfileProvider =
+    FutureProvider.family<MedicineProfile, String>(
+  (Ref ref, String name) =>
+      ref.watch(medicineKnowledgeProvider).lookup(name),
 );

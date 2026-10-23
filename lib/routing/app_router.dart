@@ -23,7 +23,7 @@ abstract final class AppRoutes {
   static const String profile = '/profile';
   static const String addMedicine = '/medicines/new';
   static const String scanPrescription = '/medicines/scan';
-  static const String assistant = '/medicines/assistant';
+  static const String assistant = '/assistant';
   static const String medicineDetail = '/medicines/:id';
 }
 
@@ -56,6 +56,11 @@ GoRouter createAppRouter({
         builder: (BuildContext context, GoRouterState state) =>
             const OnboardingScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.insights,
+        builder: (BuildContext context, GoRouterState state) =>
+            const InsightsScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (BuildContext context, GoRouterState state,
             StatefulNavigationShell shell) {
@@ -78,21 +83,19 @@ GoRouter createAppRouter({
                 routes: <RouteBase>[
                   GoRoute(
                     path: 'new',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (BuildContext context, GoRouterState state) =>
                         const AddMedicineScreen(),
                   ),
                   GoRoute(
-                    path: 'assistant',
-                    builder: (BuildContext context, GoRouterState state) =>
-                        const AssistantScreen(),
-                  ),
-                  GoRoute(
                     path: 'scan',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (BuildContext context, GoRouterState state) =>
                         const ScanPrescriptionScreen(),
                   ),
                   GoRoute(
                     path: ':id',
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (BuildContext context, GoRouterState state) =>
                         MedicineDetailScreen(
                       medicationId: state.pathParameters['id'] ?? '',
@@ -116,9 +119,9 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.insights,
+                path: AppRoutes.assistant,
                 builder: (BuildContext context, GoRouterState state) =>
-                    const InsightsScreen(),
+                    const AssistantScreen(embedded: true),
               ),
             ],
           ),

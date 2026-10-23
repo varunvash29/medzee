@@ -17,6 +17,7 @@ import '../../state/medications_provider.dart';
 import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
 import '../shared/motion_widgets.dart';
+import 'medicine_info_tabs.dart';
 
 /// Single-medicine screen: identity, schedule, stock, history and lifecycle
 /// actions. Every destructive action is confirmed in plain language.
@@ -84,13 +85,22 @@ class MedicineDetailScreen extends ConsumerWidget {
   }
 }
 
-class _Detail extends ConsumerWidget {
+class _Detail extends ConsumerStatefulWidget {
   const _Detail({required this.medication});
 
   final Medication medication;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Detail> createState() => _DetailState();
+}
+
+class _DetailState extends ConsumerState<_Detail> {
+  int _tab = 0;
+
+  Medication get medication => widget.medication;
+
+  @override
+  Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final AppStatusColors status = context.statusColors;
     final AsyncValue<List<SchedulePhase>> phases =
@@ -106,7 +116,7 @@ class _Detail extends ConsumerWidget {
         AppSpacing.gutter,
         AppSpacing.sm,
         AppSpacing.gutter,
-        150,
+        AppSpacing.xxl,
       ),
       children: <Widget>[
         // ---------------------------------------------------------- identity
@@ -149,7 +159,9 @@ class _Detail extends ConsumerWidget {
                           ].join(' · '),
                           style: theme.textTheme.bodyMedium,
                         ),
-                        if (medication.genericName?.trim().isNotEmpty ?? false)
+                        if ((medication.genericName?.trim().isNotEmpty ?? false) &&
+                            medication.genericName!.trim().toLowerCase() !=
+                                medication.name.trim().toLowerCase())
                           Text(
                             medication.genericName!.trim(),
                             style: theme.textTheme.bodySmall,
@@ -173,11 +185,6 @@ class _Detail extends ConsumerWidget {
                     icon: medication.status == MedicationStatus.active
                         ? Icons.check_circle_outline_rounded
                         : Icons.pause_circle_outline_rounded,
-                  ),
-                  StatusChip(
-                    label: medication.category.label,
-                    color: theme.colorScheme.onSurfaceVariant,
-                    containerColor: theme.colorScheme.surface,
                   ),
                   if (medication.isAsNeeded)
                     StatusChip(
@@ -218,6 +225,23 @@ class _Detail extends ConsumerWidget {
               curve: AppMotion.enter,
             ),
 
+        const SizedBox(height: AppSpacing.lg),
+        SegmentedButton<int>(
+          showSelectedIcon: false,
+          segments: const <ButtonSegment<int>>[
+            ButtonSegment<int>(value: 0, label: Text('Overview')),
+            ButtonSegment<int>(value: 1, label: Text('Info')),
+            ButtonSegment<int>(value: 2, label: Text('Alternatives')),
+          ],
+          selected: <int>{_tab},
+          onSelectionChanged: (Set<int> v) => setState(() => _tab = v.first),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (_tab == 1)
+          MedicineInfoTab(medication: medication)
+        else if (_tab == 2)
+          MedicineAlternativesTab(medication: medication)
+        else ...<Widget>[
         // ------------------------------------------------------------ stock
         SectionHeader(title: 'Stock'),
         inventory.when(
@@ -332,6 +356,7 @@ class _Detail extends ConsumerWidget {
               'changes or substitutes. Ask your pharmacist or prescriber '
               'before changing how you take a medicine.',
         ),
+        ],
       ],
     );
   }

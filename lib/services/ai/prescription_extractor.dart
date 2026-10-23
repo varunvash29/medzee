@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/models/prescription_draft.dart';
 import '../../domain/services/prescription_parser.dart';
@@ -31,7 +31,7 @@ class GeminiPrescriptionExtractor implements PrescriptionExtractor {
 
   final bool available;
 
-  static const String modelName = 'gemini-2.5-flash';
+  static const String modelName = 'gemini-3.5-flash';
 
   /// Largest file sent to the model.
   static const int maxBytes = 8 * 1024 * 1024;
@@ -220,9 +220,16 @@ Rules:
         'The assistant\'s answer could not be read. Please try again.',
       );
     } catch (e) {
+      debugPrint('Prescription AI failed: $e');
       throw ExtractionException(
-        'Could not reach the assistant. Check your connection and try again.',
+        'Could not read the prescription (${_brief(e)}). Check your '
+        'connection and try again.',
       );
     }
+  }
+
+  static String _brief(Object e) {
+    final String t = e.toString().replaceAll(RegExp(r'\s+'), ' ');
+    return t.length > 140 ? '${t.substring(0, 140)}…' : t;
   }
 }

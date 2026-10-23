@@ -263,15 +263,28 @@ class _PillPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTRB(-l / 2, -w / 2, 0, w / 2), fill);
       canvas.restore();
     } else {
-      final double d = size.width * 0.46;
-      canvas.drawCircle(Offset.zero, d / 2, fill);
-      canvas.drawLine(
-        Offset(-d * 0.3, 0),
-        Offset(d * 0.3, 0),
+      // A round tablet: tinted face, solid rim and a score line.
+      canvas.rotate(-math.pi / 6);
+      final double d = size.width * 0.5;
+      canvas.drawCircle(
+        Offset.zero,
+        d / 2,
+        Paint()..color = color.withValues(alpha: 0.22),
+      );
+      canvas.drawCircle(
+        Offset.zero,
+        d / 2,
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.7)
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round,
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      canvas.drawLine(
+        Offset(-d / 2, 0),
+        Offset(d / 2, 0),
+        Paint()
+          ..color = color
+          ..strokeWidth = 2,
       );
     }
   }

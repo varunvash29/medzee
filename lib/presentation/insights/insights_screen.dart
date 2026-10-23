@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
@@ -25,6 +26,14 @@ class InsightsScreen extends ConsumerWidget {
         ref.watch(adherenceInsightsProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          tooltip: 'Back',
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Insights'),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => ref.invalidate(adherenceInsightsProvider),
@@ -36,8 +45,6 @@ class InsightsScreen extends ConsumerWidget {
               AppSpacing.huge,
             ),
             children: <Widget>[
-              Text('Insights', style: theme.textTheme.headlineMedium),
-              const SizedBox(height: AppSpacing.md),
               const _WindowPicker(),
               const SizedBox(height: AppSpacing.lg),
               ...insights.when(

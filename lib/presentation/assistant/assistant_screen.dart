@@ -35,7 +35,10 @@ class _Proposal extends _Msg {
 /// A chat where plain-language requests become *suggested* schedule changes
 /// that only take effect after the person confirms them.
 class AssistantScreen extends ConsumerStatefulWidget {
-  const AssistantScreen({super.key});
+  const AssistantScreen({super.key, this.embedded = false});
+
+  /// True when shown as a bottom-navigation tab (no close button).
+  final bool embedded;
 
   @override
   ConsumerState<AssistantScreen> createState() => _AssistantScreenState();
@@ -258,12 +261,35 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          tooltip: 'Close',
-          onPressed: () => context.pop(),
+        automaticallyImplyLeading: false,
+        leading: widget.embedded
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Back',
+                onPressed: () => context.pop(),
+              ),
+        titleSpacing: widget.embedded ? AppSpacing.gutter : null,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            const Text('AI Assistant'),
+          ],
         ),
-        title: const Text('Schedule assistant'),
       ),
       body: SafeArea(
         child: Column(
