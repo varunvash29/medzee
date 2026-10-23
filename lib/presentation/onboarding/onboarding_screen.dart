@@ -69,13 +69,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _busy = true);
     try {
       final DateTime now = DateTime.now().toUtc();
-      final UserProfile profile = UserProfile(
-        id: const Uuid().v4(),
-        displayName: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
+      final String name = _nameController.text.trim();
+      // Reuse the existing row when one exists. Creating a fresh id on every
+      // run was how duplicate profiles could appear if onboarding was ever
+      // shown again to a returning user.
+      final UserProfile? existing = ref.read(profileProvider).value;
+      final UserProfile base = existing ??
+          UserProfile(
+            id: const Uuid().v4(),
+            createdAt: now,
+          );
+      final UserProfile profile = base.copyWith(
+        displayName: name,
+        clearDisplayName: name.isEmpty,
         onboardingCompleted: true,
-        createdAt: now,
         updatedAt: now,
       );
       await ref.read(profileControllerProvider).save(profile);

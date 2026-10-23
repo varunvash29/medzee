@@ -66,7 +66,32 @@ Add an iOS app in the same Firebase project, download
   `/medicines/<id>`) navigate through the same
   `NotificationActionDispatcher` used by local notification taps.
 
-## 5. What Firebase is *not* used for
+## 5. Testing a push (debug builds)
+
+1. Open **Profile → Developer → Copy FCM token** in a debug build (the section
+   is compiled out of release builds). The token is also printed to logcat as
+   `FCM token (debug): …`.
+2. In the Firebase console: **Messaging → Send test message** (or
+   **Cloud Messaging → New campaign → Test on device**), paste the token.
+3. Under **Additional options → Custom data**, add:
+
+   | Key | Value |
+   | --- | --- |
+   | `payload` | `/home` (any in-app route) |
+
+4. Keep Medzee in the foreground and send. The app logs
+   `FCM foreground message: data={payload: /home}` and routes through
+   `NotificationActionDispatcher`, the same path local notification taps use.
+
+The registration token is cached per install; reinstalling with `-r` keeps it,
+uninstalling generates a new one.
+
+**Do not** add `firebase_messaging_installation_id_enabled` to the manifest.
+Firebase Messaging 17 treats the installation-ID API and the legacy token API
+as mutually exclusive: enabling it makes `getToken()` fail with *"API disabled.
+Please use register() instead"*.
+
+## 6. What Firebase is *not* used for
 
 - **Reminders.** Local exact alarms are the correct mechanism (precise to the
   minute, no network, no server visibility into your schedule).

@@ -5,7 +5,7 @@ dose at the right time, keeps your stock counts honest, and shows you exactly ho
 consistent you've been — all offline, all on-device, all private.
 
 Built with Flutter 3, Material 3 (customized), Riverpod, GoRouter, and Drift
-(SQLite). Ships with **123 automated tests** covering the domain logic, services,
+(SQLite). Ships with **125 automated tests** covering the domain logic, services,
 and key screens.
 
 ---
@@ -191,7 +191,7 @@ test/
 ## Testing
 
 ```bash
-flutter test                 # all 123 tests
+flutter test                 # all 125 tests
 flutter test test/domain/    # pure domain logic
 flutter test test/presentation/
 ```

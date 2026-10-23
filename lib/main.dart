@@ -51,9 +51,19 @@ Future<void> main() async {
 
   final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>(debugLabel: 'root');
+  // Resolve first-run state before building the router. GoRouter evaluates its
+  // redirect against whatever the providers hold at creation time, so relying
+  // on the async profile stream here could show onboarding to a returning user
+  // (and, if they completed it again, create a duplicate profile).
+  final UserProfile? storedProfile =
+      await container.read(profileRepositoryProvider).getProfile();
+  final String initialLocation =
+      (storedProfile?.onboardingCompleted ?? false)
+          ? AppRoutes.home
+          : AppRoutes.onboarding;
   final GoRouter router = createAppRouter(
     rootNavigatorKey: navigatorKey,
-    initialLocation: AppRoutes.onboarding,
+    initialLocation: initialLocation,
     isOnboardingComplete: () =>
         container.read(activeProfileProvider).onboardingCompleted,
   );

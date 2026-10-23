@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_spacing.dart';
@@ -180,6 +182,24 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (kDebugMode) ...<Widget>[
+              const SectionHeader(title: 'Developer'),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
+                  leading: const Icon(Icons.vpn_key_outlined),
+                  title: const Text('Copy FCM token'),
+                  subtitle: Text(
+                    ref.watch(firebaseGatewayProvider).isAvailable
+                        ? 'Debug only — paste into the Firebase console to '
+                            'send a test message'
+                        : 'Firebase is not configured on this build',
+                  ),
+                  enabled: ref.watch(firebaseGatewayProvider).isAvailable,
+                  onTap: () => _copyFcmToken(context, ref),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             const InfoBanner(
               icon: Icons.emoji_objects_outlined,
@@ -299,6 +319,25 @@ class ProfileScreen extends ConsumerWidget {
               'file you can open with any database tool.',
         ),
       ),
+    );
+  }
+
+  Future<void> _copyFcmToken(BuildContext context, WidgetRef ref) async {
+    final String? token =
+        await ref.read(pushServiceProvider).debugRegistrationToken();
+    if (!context.mounted) return;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No FCM token — check the Firebase configuration.'),
+        ),
+      );
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: token));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('FCM token copied to clipboard.')),
     );
   }
 

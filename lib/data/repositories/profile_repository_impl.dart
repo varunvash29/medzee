@@ -15,14 +15,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Stream<UserProfile?> watchProfile() {
+    // Medzee is single-profile. `watchSingleOrNull()` throws if an older
+    // build ever wrote a second row, so order and limit to the canonical row.
     final SimpleSelectStatement<$UserProfilesTable, UserProfileRow> query =
-        _db.select(_db.userProfiles);
+        _db.select(_db.userProfiles)
+          ..orderBy(<OrderClauseGenerator<$UserProfilesTable>>[
+            ($UserProfilesTable t) => OrderingTerm.asc(t.createdAt),
+            ($UserProfilesTable t) => OrderingTerm.asc(t.id),
+          ])
+          ..limit(1);
     return query.watchSingleOrNull().map((UserProfileRow? row) => row?.toDomain());
   }
 
   @override
   Future<UserProfile?> getProfile() async {
-    final UserProfileRow? row = await _db.select(_db.userProfiles).getSingleOrNull();
+    final UserProfileRow? row = await (_db.select(_db.userProfiles)
+          ..orderBy(<OrderClauseGenerator<$UserProfilesTable>>[
+            ($UserProfilesTable t) => OrderingTerm.asc(t.createdAt),
+            ($UserProfilesTable t) => OrderingTerm.asc(t.id),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
     return row?.toDomain();
   }
 
@@ -31,6 +44,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
     await _db
         .into(_db.userProfiles)
         .insertOnConflictUpdate(profile.toCompanion());
+    // Enforce the single-profile invariant: drop any stale duplicate rows left
+    // behind by older builds that created a fresh id on every onboarding run.
+    await (_db.delete(_db.userProfiles)
+          ..where(($UserProfilesTable t) => t.id.equals(profile.id).not()))
+        .go();
   }
 
   @override

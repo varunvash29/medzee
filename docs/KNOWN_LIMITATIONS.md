@@ -46,7 +46,7 @@ what it does. Also see "not integrated by design" in
 
 ## Testing caveats
 
-- The full unit/widget suite (123 tests) runs in CI-friendly conditions.
+- The full unit/widget suite (125 tests) runs in CI-friendly conditions.
   Integration tests (`integration_test/`) require a device or emulator and are
   not part of `flutter test`.
 - Notification timing under extreme device conditions (manufacturer battery

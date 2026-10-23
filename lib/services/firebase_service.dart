@@ -75,13 +75,43 @@ class PushService {
     _foregroundSub ??=
         FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // The registration token is only needed once a server-side caregiver/sync
-    // feature exists; fetch it at that point rather than at startup.
+    if (kDebugMode) {
+      // Setup aid only: prints the registration token so it can be pasted into
+      // the Firebase console's "Send test message" dialog. Never runs in a
+      // release build.
+      unawaited(debugRegistrationToken());
+    }
+
     return PushStatus.ready;
+  }
+
+  /// Registers this install with FCM and returns its registration token.
+  ///
+  /// Debug builds only — the token is a device credential and is deliberately
+  /// never surfaced (or logged) in release. Returns null when Firebase is
+  /// unavailable or registration fails.
+  Future<String?> debugRegistrationToken() async {
+    if (!kDebugMode) return null;
+    final FirebaseMessaging? messaging = _messaging;
+    if (messaging == null) return null;
+    try {
+      // NOTE: do NOT call register() first. `register()` belongs to the newer
+      // installation-ID API and, once used, disables the legacy token API.
+      // The console's "send test message" dialog still takes a registration
+      // token, which only getToken() returns.
+      // ignore: deprecated_member_use
+      final String? token = await messaging.getToken();
+      debugPrint('FCM token (debug): $token');
+      return token;
+    } catch (error) {
+      debugPrint('FCM token (debug): unavailable ($error).');
+      return null;
+    }
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
     final String payload = message.data['payload'] as String? ?? '';
+    debugPrint('FCM foreground message: data=${message.data}');
     _dispatcher.dispatch(
       NotificationActionEvent(actionId: 'fcm', payload: payload),
     );
