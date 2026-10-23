@@ -6,6 +6,7 @@ import '../presentation/calendar/calendar_screen.dart';
 import '../presentation/home/home_screen.dart';
 import '../presentation/insights/insights_screen.dart';
 import '../presentation/medicines/add_medicine_screen.dart';
+import '../presentation/medicines/edit_medicine_screen.dart';
 import '../presentation/medicines/medicine_detail_screen.dart';
 import '../presentation/medicines/medicines_screen.dart';
 import '../presentation/onboarding/onboarding_screen.dart';
@@ -96,6 +97,16 @@ GoRouter createAppRouter({
                   GoRoute(
                     path: ':id',
                     parentNavigatorKey: rootNavigatorKey,
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'edit',
+                        parentNavigatorKey: rootNavigatorKey,
+                        builder: (BuildContext context, GoRouterState state) =>
+                            EditMedicineScreen(
+                          medicationId: state.pathParameters['id'] ?? '',
+                        ),
+                      ),
+                    ],
                     builder: (BuildContext context, GoRouterState state) =>
                         MedicineDetailScreen(
                       medicationId: state.pathParameters['id'] ?? '',

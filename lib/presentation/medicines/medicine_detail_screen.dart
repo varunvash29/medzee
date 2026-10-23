@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
@@ -40,7 +41,7 @@ class MedicineDetailScreen extends ConsumerWidget {
             tooltip: 'Edit',
             onPressed: medication.value == null
                 ? null
-                : () => _showEditSheet(context, ref, medication.value!),
+                : () => context.push('/medicines/$medicationId/edit'),
           ),
         ],
       ),
@@ -68,19 +69,6 @@ class MedicineDetailScreen extends ConsumerWidget {
           return _Detail(medication: med);
         },
       ),
-    );
-  }
-
-  Future<void> _showEditSheet(
-    BuildContext context,
-    WidgetRef ref,
-    Medication medication,
-  ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (BuildContext context) => _QuickEditSheet(medication: medication),
     );
   }
 }
@@ -251,7 +239,14 @@ class _DetailState extends ConsumerState<_Detail> {
         ),
 
         // ---------------------------------------------------------- schedule
-        SectionHeader(title: 'Schedule'),
+        SectionHeader(
+          title: 'Schedule',
+          trailing: TextButton.icon(
+            onPressed: () => context.push('/medicines/${medication.id}/edit'),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit'),
+          ),
+        ),
         phases.when(
           loading: () => const AppCard(child: SizedBox(height: 60)),
           error: (_, __) => const SizedBox.shrink(),
@@ -717,82 +712,3 @@ class _ActionRow extends StatelessWidget {
 
 /// Compact sheet for renaming and toggling favourites without leaving the
 /// detail screen. Full schedule editing lives in the add/edit flow.
-class _QuickEditSheet extends ConsumerStatefulWidget {
-  const _QuickEditSheet({required this.medication});
-
-  final Medication medication;
-
-  @override
-  ConsumerState<_QuickEditSheet> createState() => _QuickEditSheetState();
-}
-
-class _QuickEditSheetState extends ConsumerState<_QuickEditSheet> {
-  late final TextEditingController _name;
-  late bool _favorite;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _name = TextEditingController(text: widget.medication.name);
-    _favorite = widget.medication.isFavorite;
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.gutter,
-        right: AppSpacing.gutter,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text('Edit medicine', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.lg),
-          TextField(
-            controller: _name,
-            decoration: InputDecoration(
-              labelText: 'Name',
-              errorText: _error,
-            ),
-            textCapitalization: TextCapitalization.sentences,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Favourite'),
-            value: _favorite,
-            onChanged: (bool value) => setState(() => _favorite = value),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppPrimaryButton(
-            label: 'Save',
-            onPressed: () async {
-              final String trimmed = _name.text.trim();
-              if (trimmed.isEmpty) {
-                setState(() => _error = 'Name cannot be empty.');
-                return;
-              }
-              await ref.read(medicationRepositoryProvider).save(
-                    widget.medication.copyWith(
-                      name: trimmed,
-                      isFavorite: _favorite,
-                      updatedAt: DateTime.now().toUtc(),
-                    ),
-                  );
-              if (context.mounted) Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
