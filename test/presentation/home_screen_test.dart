@@ -12,6 +12,8 @@ import 'package:medzee/presentation/home/home_screen.dart';
 import 'package:medzee/services/dose_service.dart';
 import 'package:medzee/state/dose_actions.dart';
 import 'package:medzee/state/doses_provider.dart';
+import 'package:medzee/state/inventory_providers.dart';
+import 'package:medzee/state/medications_provider.dart';
 import 'package:medzee/state/profile_providers.dart';
 
 import '../helpers/fakes.dart';
@@ -54,6 +56,8 @@ Future<void> _pumpHome(
   FakeDoseRepository? doses,
   FakeInventoryRepository? inventory,
   UserProfile profile = const UserProfile(id: 'local', displayName: 'Asha'),
+  bool noMedicines = false,
+  bool settle = true,
 }) async {
   doses ??= FakeDoseRepository();
   inventory ??= FakeInventoryRepository();
@@ -84,6 +88,12 @@ Future<void> _pumpHome(
       overrides: <Override>[
         todayTimelineProvider
             .overrideWith((Ref ref) => Stream<List<TodayEntry>>.value(entries)),
+        medicationsProvider.overrideWith(
+          (Ref ref) => Stream<List<Medication>>.value(
+            noMedicines ? const <Medication>[] : <Medication>[medication],
+          ),
+        ),
+        lowStockMedicationsProvider.overrideWithValue(const <Medication>[]),
         activeProfileProvider.overrideWithValue(profile),
         doseActionsProvider.overrideWithValue(actions),
       ],
@@ -93,7 +103,13 @@ Future<void> _pumpHome(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+  }
 }
 
 void main() {
@@ -117,9 +133,9 @@ void main() {
     );
 
     expect(find.text('Asha'), findsOneWidget);
-    expect(find.text("Today's doses"), findsOneWidget);
+    expect(find.text('Morning'), findsOneWidget);
     expect(find.text('Metformin'), findsNWidgets(2));
-    expect(find.text('1 of 2 taken'), findsOneWidget);
+    expect(find.text('1 of 2 doses completed'), findsOneWidget);
     expect(find.text('Taken'), findsOneWidget);
 
     // The next pending dose offers the quick actions.
@@ -195,5 +211,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('detail:med-1'), findsOneWidget);
+  });
+
+  testWidgets('shows the first-use state when there are no medicines',
+      (WidgetTester tester) async {
+    await _pumpHome(
+      tester,
+      entries: const <TodayEntry>[],
+      noMedicines: true,
+      settle: false,
+    );
+
+    expect(find.text('Nothing scheduled today'), findsNothing);
+    expect(find.text('Start your routine'), findsOneWidget);
   });
 }

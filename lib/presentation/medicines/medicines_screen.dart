@@ -9,10 +9,12 @@ import '../../core/theme/app_status_colors.dart';
 import '../../domain/models/core_enums.dart';
 import '../../domain/models/inventory.dart';
 import '../../domain/models/medication.dart';
+import '../../routing/app_router.dart';
 import '../../state/insights_provider.dart';
 import '../../state/inventory_providers.dart';
 import '../../state/medications_provider.dart';
 import '../shared/app_widgets.dart';
+import '../shared/motion_widgets.dart';
 
 /// Searchable library of the user's medicines with status filters.
 class MedicinesScreen extends ConsumerStatefulWidget {
@@ -60,14 +62,60 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('Medicines', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Medicines',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Schedule assistant',
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                        onPressed: () => context.push(AppRoutes.assistant),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    all.maybeWhen(
+                      data: (List<Medication> m) => m.isEmpty
+                          ? 'Your personal medicine library'
+                          : '${m.length} in your library',
+                      orElse: () => 'Your personal medicine library',
+                    ),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                   TextField(
                     controller: _search,
                     onChanged: (String value) =>
                         ref.read(libraryFilterProvider.notifier).setQuery(value),
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: 'Search by name or active ingredient',
+                      filled: true,
+                      fillColor:
+                          Theme.of(context).colorScheme.surfaceContainer,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 1.4,
+                        ),
+                      ),
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: filter.query.isEmpty
                           ? null
@@ -153,21 +201,46 @@ class _MedicinesScreenState extends ConsumerState<MedicinesScreen> {
                     );
                   }
 
-                  return ListView.separated(
+                  final ThemeData theme = Theme.of(context);
+                  return ListView(
+                    key: PageStorageKey<String>(
+                        'medicines-${filter.status.name}'),
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.gutter,
                       AppSpacing.lg,
                       AppSpacing.gutter,
-                      AppSpacing.huge,
+                      150,
                     ),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (BuildContext context, int index) =>
-                        _MedicineTile(
-                      medication: filtered[index],
-                      index: index,
-                    ),
+                    children: <Widget>[
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: <Widget>[
+                            for (int i = 0; i < filtered.length; i++) ...<Widget>[
+                              if (i > 0)
+                                Divider(
+                                  indent: 74,
+                                  endIndent: AppSpacing.lg,
+                                  color: theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.6),
+                                ),
+                              _MedicineTile(
+                                medication: filtered[i],
+                                index: i,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -199,7 +272,7 @@ class _FilterChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: selected
             ? theme.colorScheme.primary
-            : theme.colorScheme.surfaceContainerHighest,
+            : theme.colorScheme.surfaceContainer,
         borderRadius: AppRadii.pill,
       ),
       child: Material(
@@ -246,112 +319,108 @@ class _MedicineTile extends ConsumerWidget {
     final Inventory? stock = inventory.value;
     final bool lowStock = stock?.isLowStock ?? false;
 
-    return AppCard(
+    return InkWell(
       onTap: () => context.go('/medicines/${medication.id}'),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(AppRadii.md),
-            ),
-            child: Icon(
-              _iconFor(medication.form),
-              color: theme.colorScheme.onPrimaryContainer,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        medication.name,
-                        style: theme.textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md + 2,
+        ),
+        child: Row(
+          children: <Widget>[
+            DoseFormIcon(form: medication.form, size: 46),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          medication.name,
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    if (medication.isFavorite)
-                      const Icon(Icons.favorite_rounded,
-                          size: 15, color: AppColorsLike.pink),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _subtitle(medication),
-                  style: theme.textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
-                    if (stock != null)
-                      StatusChip(
-                        label: lowStock
-                            ? 'Low · ${_qty(stock.quantityOnHand)} left'
-                            : '${_qty(stock.quantityOnHand)} ${stock.unit.singular}',
-                        color: lowStock
-                            ? status.warning
-                            : theme.colorScheme.onSurfaceVariant,
-                        containerColor: lowStock
-                            ? status.warningContainer
-                            : theme.colorScheme.surfaceContainerHighest,
-                        icon: lowStock
-                            ? Icons.warning_amber_rounded
-                            : Icons.inventory_2_outlined,
+                      if (medication.isFavorite) ...<Widget>[
+                        const SizedBox(width: 6),
+                        const Icon(Icons.favorite_rounded,
+                            size: 14, color: AppColorsLike.pink),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _subtitle(medication),
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: <Widget>[
+                      if (stock != null)
+                        StatusChip(
+                          label: lowStock
+                              ? 'Low · ${_qty(stock.quantityOnHand)} left'
+                              : '${_qty(stock.quantityOnHand)} ${stock.unit.singular}',
+                          color: lowStock
+                              ? status.warning
+                              : theme.colorScheme.onSurfaceVariant,
+                          containerColor: lowStock
+                              ? status.warningContainer
+                              : theme.colorScheme.surfaceContainer,
+                          icon: lowStock
+                              ? Icons.warning_amber_rounded
+                              : Icons.inventory_2_outlined,
+                        ),
+                      adherence.when(
+                        data: (MedicationAdherence value) {
+                          final double? percent = value.percent;
+                          if (percent == null) return const SizedBox.shrink();
+                          return StatusChip(
+                            label: '${percent.round()}% taken',
+                            color: percent >= 90
+                                ? status.taken
+                                : percent >= 70
+                                    ? status.warning
+                                    : status.missed,
+                            containerColor: percent >= 90
+                                ? status.takenContainer
+                                : percent >= 70
+                                    ? status.warningContainer
+                                    : status.missedContainer,
+                            icon: Icons.trending_up_rounded,
+                          );
+                        },
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
                       ),
-                    adherence.when(
-                      data: (MedicationAdherence value) {
-                        final double? percent = value.percent;
-                        if (percent == null) return const SizedBox.shrink();
-                        return StatusChip(
-                          label: '${percent.round()}% taken',
-                          color: percent >= 90
-                              ? status.taken
-                              : percent >= 70
-                                  ? status.warning
-                                  : status.missed,
-                          containerColor: percent >= 90
-                              ? status.takenContainer
-                              : percent >= 70
-                                  ? status.warningContainer
-                                  : status.missedContainer,
-                          icon: Icons.trending_up_rounded,
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: theme.colorScheme.outline,
-          ),
-        ],
+            const SizedBox(width: AppSpacing.xs),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.outline,
+            ),
+          ],
+        ),
       ),
     )
         .animate()
         .fadeIn(
           duration: AppMotion.medium,
-          delay: (index * 40).ms,
+          delay: (index.clamp(0, 8) * 35).ms,
           curve: AppMotion.enter,
-        )
-        .slideX(begin: 0.04, curve: AppMotion.enter);
+        );
   }
 
   String _subtitle(Medication medication) {
@@ -367,17 +436,6 @@ class _MedicineTile extends ConsumerWidget {
       value == value.roundToDouble()
           ? value.toInt().toString()
           : value.toStringAsFixed(1);
-
-  IconData _iconFor(DosageForm form) => switch (form) {
-        DosageForm.tablet || DosageForm.capsule => Icons.medication_rounded,
-        DosageForm.liquid => Icons.local_drink_rounded,
-        DosageForm.injection => Icons.colorize_rounded,
-        DosageForm.inhaler => Icons.air_rounded,
-        DosageForm.drops => Icons.water_drop_rounded,
-        DosageForm.cream => Icons.brush_rounded,
-        DosageForm.patch => Icons.healing_rounded,
-        DosageForm.other => Icons.medication_liquid_rounded,
-      };
 }
 
 /// Small colour constants kept local to the tile to avoid growing the

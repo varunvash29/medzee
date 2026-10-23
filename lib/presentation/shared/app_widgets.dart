@@ -48,8 +48,10 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.1,
+              ),
             ),
           ),
           if (trailing != null) trailing!,
@@ -87,18 +89,20 @@ class AppCard extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         color: color ?? theme.colorScheme.surface,
-        borderRadius: AppRadii.card,
+        borderRadius: AppRadii.cardLarge,
         border: Border.all(
-          color: borderColor ?? theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+          color: borderColor ?? theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
         ),
-        boxShadow: theme.brightness == Brightness.light ? AppShadows.soft : null,
       ),
       child: onTap == null
           ? content
-          : InkWell(
-              onTap: onTap,
-              borderRadius: AppRadii.card,
-              child: content,
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: AppRadii.cardLarge,
+                child: content,
+              ),
             ),
     );
   }
@@ -300,16 +304,25 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Container(
-              width: 72,
-              height: 72,
+              width: 104,
+              height: 104,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppRadii.full),
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
+                shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 34,
-                color: theme.colorScheme.onPrimaryContainer,
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 34,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

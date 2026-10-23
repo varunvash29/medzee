@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_status_colors.dart';
 import '../../domain/models/core_enums.dart';
@@ -10,43 +13,49 @@ import '../../state/dose_actions.dart';
 import '../../state/doses_provider.dart';
 import '../../state/medications_provider.dart';
 import '../shared/app_widgets.dart';
+import '../shared/motion_widgets.dart';
 
-/// Month-style day navigator plus the full dose list for the selected day.
+const List<String> _weekdayShort = <String>[
+  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+];
+const List<String> _months = <String>[
+  'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+  'September', 'October', 'November', 'December',
+];
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Week strip plus the full dose list for the selected day.
 ///
-/// The calendar is intentionally not a grid: what matters here is reviewing
-/// one day at a time and correcting records, which a scrolling list does
-/// better than a dense month view.
+/// The strip keeps the screen calm; a date picker is one tap away for jumping
+/// to any month.
 class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ThemeData theme = Theme.of(context);
     final DateTime selected = ref.watch(selectedDateProvider);
     final AsyncValue<List<ScheduledDose>> doses =
         ref.watch(dosesForDateProvider(selected));
 
     return Scaffold(
       body: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.gutter,
-                AppSpacing.lg,
+                AppSpacing.md,
                 AppSpacing.gutter,
                 0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text('History', style: theme.textTheme.headlineMedium),
-                  const SizedBox(height: AppSpacing.md),
-                  _DayNavigator(selected: selected),
-                ],
-              ),
+              child: _Header(selected: selected),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            _WeekStrip(selected: selected),
             Expanded(
               child: doses.when(
                 loading: () =>
@@ -69,18 +78,28 @@ class CalendarScreen extends ConsumerWidget {
                           'reach this date yet.',
                     );
                   }
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.gutter,
-                      AppSpacing.lg,
-                      AppSpacing.gutter,
-                      AppSpacing.huge,
+                  return AnimatedSwitcher(
+                    duration: AppMotion.medium,
+                    switchInCurve: AppMotion.enter,
+                    child: ListView(
+                      key: ValueKey<DateTime>(selected),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.gutter,
+                        AppSpacing.lg,
+                        AppSpacing.gutter,
+                        150,
+                      ),
+                      children: <Widget>[
+                        _DaySummary(doses: list),
+                        const SizedBox(height: AppSpacing.lg),
+                        for (int i = 0; i < list.length; i++)
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: _HistoryTile(dose: list[i], index: i),
+                          ),
+                      ],
                     ),
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (BuildContext context, int index) =>
-                        _HistoryTile(dose: list[index], index: index),
                   );
                 },
               ),
@@ -92,8 +111,8 @@ class CalendarScreen extends ConsumerWidget {
   }
 }
 
-class _DayNavigator extends ConsumerWidget {
-  const _DayNavigator({required this.selected});
+class _Header extends ConsumerWidget {
+  const _Header({required this.selected});
 
   final DateTime selected;
 
@@ -101,68 +120,227 @@ class _DayNavigator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final DateTime today = ref.watch(todayProvider);
-    final bool isToday = selected.year == today.year &&
-        selected.month == today.month &&
-        selected.day == today.day;
+    final bool isToday = _sameDay(selected, today);
 
-    return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      child: Row(
-        children: <Widget>[
-          IconButton(
-            tooltip: 'Previous day',
-            icon: const Icon(Icons.chevron_left_rounded),
-            onPressed: () =>
-                ref.read(selectedDateProvider.notifier).goToPrevious(),
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                '${_months[selected.month - 1]} ${selected.year}',
+                style: theme.textTheme.headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                isToday
+                    ? 'Today'
+                    : '${_weekdayShort[selected.weekday - 1]}, ${selected.day} '
+                        '${_months[selected.month - 1].substring(0, 3)}',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
           ),
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                Text(
-                  _formatFull(selected),
-                  style: theme.textTheme.titleSmall,
-                  textAlign: TextAlign.center,
+        ),
+        AnimatedSwitcher(
+          duration: AppMotion.fast,
+          child: isToday
+              ? const SizedBox.shrink()
+              : TextButton(
+                  key: const ValueKey<String>('today'),
+                  onPressed: () =>
+                      ref.read(selectedDateProvider.notifier).goToToday(),
+                  child: const Text('Today'),
                 ),
-                if (!isToday)
-                  TextButton(
-                    onPressed: () =>
-                        ref.read(selectedDateProvider.notifier).goToToday(),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 24),
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
+        ),
+        IconButton.filledTonal(
+          tooltip: 'Pick a date',
+          icon: const Icon(Icons.calendar_month_rounded),
+          onPressed: () async {
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: selected,
+              firstDate: DateTime(today.year - 3),
+              lastDate: DateTime(today.year + 2),
+            );
+            if (picked != null) {
+              ref.read(selectedDateProvider.notifier).select(picked);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _WeekStrip extends ConsumerWidget {
+  const _WeekStrip({required this.selected});
+
+  final DateTime selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final DateTime today = ref.watch(todayProvider);
+    final DateTime monday =
+        selected.subtract(Duration(days: selected.weekday - 1));
+    final List<DateTime> days = List<DateTime>.generate(
+      7,
+      (int i) => DateTime(monday.year, monday.month, monday.day + i),
+    );
+
+    return GestureDetector(
+      onHorizontalDragEnd: (DragEndDetails d) {
+        final double v = d.primaryVelocity ?? 0;
+        if (v.abs() < 200) return;
+        HapticFeedback.selectionClick();
+        ref.read(selectedDateProvider.notifier).select(
+              selected.add(Duration(days: v < 0 ? 7 : -7)),
+            );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: Row(
+          children: <Widget>[
+            for (final DateTime day in days)
+              Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: _sameDay(day, selected),
+                  label: '${_weekdayShort[day.weekday - 1]} ${day.day}'
+                      '${_sameDay(day, today) ? ', today' : ''}',
+                  child: Pressable(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref.read(selectedDateProvider.notifier).select(day);
+                    },
+                    child: _DayCell(
+                      day: day,
+                      selected: _sameDay(day, selected),
+                      isToday: _sameDay(day, today),
+                      theme: theme,
                     ),
-                    child: const Text('Back to today'),
-                  )
-                else
-                  SizedBox(height: theme.textTheme.labelSmall?.height ?? 14),
-              ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.selected,
+    required this.isToday,
+    required this.theme,
+  });
+
+  final DateTime day;
+  final bool selected;
+  final bool isToday;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme c = theme.colorScheme;
+    return AnimatedContainer(
+      duration: AppMotion.medium,
+      curve: AppMotion.emphasized,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: selected ? c.primary : Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        border: !selected && isToday
+            ? Border.all(color: c.primary.withValues(alpha: 0.5))
+            : null,
+      ),
+      child: Column(
+        children: <Widget>[
+          Text(
+            _weekdayShort[day.weekday - 1].substring(0, 1),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: selected
+                  ? c.onPrimary.withValues(alpha: 0.8)
+                  : c.onSurfaceVariant,
             ),
           ),
-          IconButton(
-            tooltip: 'Next day',
-            icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: () => ref.read(selectedDateProvider.notifier).goToNext(),
+          const SizedBox(height: 4),
+          Text(
+            '${day.day}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: selected ? c.onPrimary : c.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  String _formatFull(DateTime date) {
-    const List<String> weekdays = <String>[
-      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
-      'Sunday',
-    ];
-    const List<String> months = <String>[
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
-      'Nov', 'Dec',
-    ];
-    return '${weekdays[date.weekday - 1]}, ${date.day} '
-        '${months[date.month - 1]} ${date.year}';
+/// One-line proportional summary of the day, with text counts so colour is
+/// never the only signal.
+class _DaySummary extends StatelessWidget {
+  const _DaySummary({required this.doses});
+
+  final List<ScheduledDose> doses;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final AppStatusColors status = context.statusColors;
+    int count(DoseStatus s) =>
+        doses.where((ScheduledDose d) => d.status == s).length;
+    final int taken = count(DoseStatus.taken);
+    final int missed = count(DoseStatus.missed);
+    final int skipped = count(DoseStatus.skipped);
+    final int pending = count(DoseStatus.pending);
+    final int total = taken + missed + skipped + pending;
+    if (total == 0) return const SizedBox.shrink();
+
+    Widget seg(int n, Color color) => n == 0
+        ? const SizedBox.shrink()
+        : Expanded(
+            flex: n,
+            child: Container(
+              height: 8,
+              margin: const EdgeInsets.only(right: 3),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            seg(taken, status.taken),
+            seg(skipped, status.skipped),
+            seg(missed, status.missed),
+            seg(pending, theme.colorScheme.outlineVariant),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          <String>[
+            '$taken taken',
+            if (missed > 0) '$missed missed',
+            if (skipped > 0) '$skipped skipped',
+            if (pending > 0) '$pending upcoming',
+          ].join('  ·  '),
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
+    );
   }
 }
 
@@ -196,43 +374,61 @@ class _HistoryTile extends ConsumerWidget {
         (status.upcoming, status.upcomingContainer, 'Pending', Icons.schedule_rounded),
     };
 
-    return AppCard(
+    return Pressable(
+      scale: 0.98,
       onTap: () => _showActions(context, ref, med),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(AppRadii.md),
-            ),
-            child: Icon(icon, color: accent, size: 22),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  med?.name ?? 'Medicine',
-                  style: theme.textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${_hhmm(dose.scheduledMinutes)} · '
-                  '${_qty(dose.doseQuantity)} ${dose.unit.singular}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: background,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: accent, size: 20),
             ),
-          ),
-          StatusChip(label: label, color: accent, containerColor: background),
-        ],
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    med?.name ?? 'Medicine',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_hhmm(dose.scheduledMinutes)} · '
+                    '${_qty(dose.doseQuantity)} ${dose.unit.singular}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            StatusChip(label: label, color: accent, containerColor: background),
+          ],
+        ),
       ),
-    );
+    )
+        .animate()
+        .fadeIn(
+          duration: AppMotion.medium,
+          delay: (index.clamp(0, 8) * 30).ms,
+        )
+        .slideY(begin: 0.05, curve: AppMotion.enter);
   }
 
   Future<void> _showActions(

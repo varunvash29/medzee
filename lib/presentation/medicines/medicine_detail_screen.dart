@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_status_colors.dart';
 import '../../domain/models/core_enums.dart';
@@ -14,6 +16,7 @@ import '../../state/inventory_providers.dart';
 import '../../state/medications_provider.dart';
 import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
+import '../shared/motion_widgets.dart';
 
 /// Single-medicine screen: identity, schedule, stock, history and lifecycle
 /// actions. Every destructive action is confirmed in plain language.
@@ -103,36 +106,39 @@ class _Detail extends ConsumerWidget {
         AppSpacing.gutter,
         AppSpacing.sm,
         AppSpacing.gutter,
-        AppSpacing.huge,
+        150,
       ),
       children: <Widget>[
         // ---------------------------------------------------------- identity
-        AppCard(
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            color: theme.colorScheme.primaryContainer,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                    ),
-                    child: Icon(
-                      Icons.medication_rounded,
-                      color: theme.colorScheme.onPrimaryContainer,
-                      size: 28,
-                    ),
+                  DoseFormIcon(
+                    form: medication.form,
+                    size: 64,
+                    background: theme.colorScheme.surface.withValues(alpha: 0.8),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.lg),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(medication.name, style: theme.textTheme.titleLarge),
+                        Text(
+                          medication.name,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            height: 1.15,
+                          ),
+                        ),
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
                           [
@@ -140,16 +146,20 @@ class _Detail extends ConsumerWidget {
                               medication.strengthLabel!,
                             medication.form.label,
                             medication.route.label,
-                            medication.category.label,
                           ].join(' · '),
-                          style: theme.textTheme.bodySmall,
+                          style: theme.textTheme.bodyMedium,
                         ),
+                        if (medication.genericName?.trim().isNotEmpty ?? false)
+                          Text(
+                            medication.genericName!.trim(),
+                            style: theme.textTheme.bodySmall,
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
@@ -159,22 +169,28 @@ class _Detail extends ConsumerWidget {
                     color: medication.status == MedicationStatus.active
                         ? status.taken
                         : theme.colorScheme.onSurfaceVariant,
-                    containerColor: medication.status == MedicationStatus.active
-                        ? status.takenContainer
-                        : theme.colorScheme.surfaceContainerHighest,
+                    containerColor: theme.colorScheme.surface,
+                    icon: medication.status == MedicationStatus.active
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.pause_circle_outline_rounded,
+                  ),
+                  StatusChip(
+                    label: medication.category.label,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    containerColor: theme.colorScheme.surface,
                   ),
                   if (medication.isAsNeeded)
                     StatusChip(
                       label: 'As needed',
                       color: status.info,
-                      containerColor: status.infoContainer,
+                      containerColor: theme.colorScheme.surface,
                       icon: Icons.info_outline_rounded,
                     ),
                   if (medication.foodInstruction != FoodInstruction.anyTime)
                     StatusChip(
                       label: medication.foodInstruction.shortLabel,
                       color: status.warning,
-                      containerColor: status.warningContainer,
+                      containerColor: theme.colorScheme.surface,
                       icon: Icons.restaurant_outlined,
                     ),
                 ],
@@ -197,7 +213,10 @@ class _Detail extends ConsumerWidget {
               ],
             ],
           ),
-        ),
+        ).animate().fadeIn(duration: AppMotion.medium).slideY(
+              begin: 0.04,
+              curve: AppMotion.enter,
+            ),
 
         // ------------------------------------------------------------ stock
         SectionHeader(title: 'Stock'),
@@ -515,54 +534,70 @@ class _LifecycleActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
     final bool active = medication.status == MedicationStatus.active;
 
-    return Column(
-      children: <Widget>[
-        AppSecondaryButton(
-          label: active ? 'Pause reminders' : 'Resume reminders',
-          icon: active ? Icons.pause_rounded : Icons.play_arrow_rounded,
-          onPressed: () async {
-            final service = ref.read(medicationServiceProvider);
-            if (active) {
-              await service.pause(medication);
-            } else {
-              await service.resume(medication);
-            }
-          },
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (medication.status != MedicationStatus.completed)
-          AppSecondaryButton(
-            label: 'Mark course as finished',
-            icon: Icons.flag_outlined,
-            onPressed: () => _confirm(
-              context,
-              title: 'Finish this course?',
-              body:
-                  'Reminders stop and the medicine moves to Completed. Your '
-                  'history and stock are kept.',
-              onConfirm: () =>
-                  ref.read(medicationServiceProvider).endTreatment(medication),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.sm),
-        AppSecondaryButton(
-          label: 'Delete medicine',
-          icon: Icons.delete_outline_rounded,
-          destructive: true,
-          onPressed: () => _confirm(
+    final List<_ActionRow> rows = <_ActionRow>[
+      _ActionRow(
+        icon: active ? Icons.pause_circle_outline_rounded : Icons.play_circle_outline_rounded,
+        label: active ? 'Pause reminders' : 'Resume reminders',
+        onTap: () async {
+          final service = ref.read(medicationServiceProvider);
+          if (active) {
+            await service.pause(medication);
+          } else {
+            await service.resume(medication);
+          }
+        },
+      ),
+      if (medication.status != MedicationStatus.completed)
+        _ActionRow(
+          icon: Icons.flag_outlined,
+          label: 'Mark course as finished',
+          onTap: () => _confirm(
             context,
-            title: 'Delete ${medication.name}?',
+            title: 'Finish this course?',
             body:
-                'The medicine, its schedule and its reminders are removed. '
-                'Past dose history is kept so your records stay complete.',
-            confirmLabel: 'Delete',
+                'Reminders stop and the medicine moves to Completed. Your '
+                'history and stock are kept.',
             onConfirm: () =>
-                ref.read(medicationServiceProvider).delete(medication),
+                ref.read(medicationServiceProvider).endTreatment(medication),
           ),
         ),
-      ],
+      _ActionRow(
+        icon: Icons.delete_outline_rounded,
+        label: 'Delete medicine',
+        destructive: true,
+        onTap: () => _confirm(
+          context,
+          title: 'Delete ${medication.name}?',
+          body:
+              'The medicine, its schedule and its reminders are removed. '
+              'Past dose history is kept so your records stay complete.',
+          confirmLabel: 'Delete',
+          onConfirm: () =>
+              ref.read(medicationServiceProvider).delete(medication),
+        ),
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: <Widget>[
+          for (int i = 0; i < rows.length; i++) ...<Widget>[
+            if (i > 0) const Divider(indent: 56),
+            rows[i],
+          ],
+        ],
+      ),
     );
   }
 
@@ -573,24 +608,85 @@ class _LifecycleActions extends ConsumerWidget {
     required Future<void> Function() onConfirm,
     String confirmLabel = 'Confirm',
   }) async {
-    final bool? ok = await showDialog<bool>(
+    final bool? ok = await showModalBottomSheet<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+      showDragHandle: true,
+      builder: (BuildContext context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xxl,
+            0,
+            AppSpacing.xxl,
+            AppSpacing.xl,
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(confirmLabel),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: AppSpacing.sm),
+              Text(body, style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: AppSpacing.xl),
+              AppPrimaryButton(
+                label: confirmLabel,
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Center(child: Text('Cancel')),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
     if (ok == true) await onConfirm();
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Color color =
+        destructive ? theme.colorScheme.error : theme.colorScheme.onSurface;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg - 2,
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(color: color),
+              ),
+            ),
+            if (!destructive)
+              Icon(Icons.chevron_right_rounded,
+                  color: theme.colorScheme.outline),
+          ],
+        ),
+      ),
+    );
   }
 }
 
