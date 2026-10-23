@@ -128,6 +128,9 @@ class ScheduleService {
     for (final ScheduledDose dose in doses) {
       if (dose.medicationId != medication.id) continue;
       if (dose.status != DoseStatus.pending) continue;
+      // A reminder for a time that has already passed cannot be scheduled.
+      // The dose still shows on Home; it just has no alarm.
+      if (!dose.scheduledAt.toUtc().isAfter(reference.toUtc())) continue;
 
       final int notificationId = NotificationService.idFor(
         1000000,

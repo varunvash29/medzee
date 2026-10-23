@@ -253,6 +253,7 @@ class NotificationService {
     bool vibrationEnabled = true,
   }) async {
     if (kIsWeb) return;
+    if (!scheduledAt.toUtc().isAfter(DateTime.now().toUtc())) return;
     if (!_initialised) await initialize();
 
     final bool private = privacy == NotificationPrivacy.private;
@@ -312,6 +313,7 @@ class NotificationService {
     String channelId = _stockChannelId,
   }) async {
     if (kIsWeb) return;
+    if (!scheduledAt.toUtc().isAfter(DateTime.now().toUtc())) return;
     if (!_initialised) await initialize();
     await _plugin.zonedSchedule(
       notificationId,
