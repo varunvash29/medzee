@@ -97,6 +97,10 @@ class NotificationService {
   /// Prepares the plugin and creates the Android channels.
   Future<void> initialize() async {
     if (_initialised) return;
+    if (kIsWeb) {
+      _initialised = true; // no local notifications on web
+      return;
+    }
 
     const AndroidInitializationSettings android =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -153,6 +157,15 @@ class NotificationService {
   ///
   /// Returns the resulting status so the UI can explain what happened.
   Future<NotificationPermissionStatus> requestPermission() async {
+    if (kIsWeb) {
+      return const NotificationPermissionStatus(
+        granted: false,
+        exactAlarmsAllowed: false,
+        supported: false,
+        explanation: 'Reminders run on your phone. The web version is for '
+            'viewing and editing your medicines.',
+      );
+    }
     if (!_initialised) await initialize();
 
     bool granted = true;
@@ -187,6 +200,15 @@ class NotificationService {
 
   /// Reads the current permission state without prompting the user.
   Future<NotificationPermissionStatus> checkPermission() async {
+    if (kIsWeb) {
+      return const NotificationPermissionStatus(
+        granted: false,
+        exactAlarmsAllowed: false,
+        supported: false,
+        explanation: 'Reminders run on your phone. The web version is for '
+            'viewing and editing your medicines.',
+      );
+    }
     if (!_initialised) await initialize();
     bool granted = true;
     bool exactAlarms = true;
@@ -230,6 +252,7 @@ class NotificationService {
     bool soundEnabled = true,
     bool vibrationEnabled = true,
   }) async {
+    if (kIsWeb) return;
     if (!_initialised) await initialize();
 
     final bool private = privacy == NotificationPrivacy.private;
@@ -288,6 +311,7 @@ class NotificationService {
     required String payload,
     String channelId = _stockChannelId,
   }) async {
+    if (kIsWeb) return;
     if (!_initialised) await initialize();
     await _plugin.zonedSchedule(
       notificationId,
@@ -313,6 +337,7 @@ class NotificationService {
     required String body,
     String payload = '',
   }) async {
+    if (kIsWeb) return;
     if (!_initialised) await initialize();
     await _plugin.show(
       notificationId,
@@ -331,24 +356,28 @@ class NotificationService {
 
   /// Cancels a single scheduled notification.
   Future<void> cancel(int notificationId) async {
+    if (kIsWeb) return;
     if (!_initialised) await initialize();
     await _plugin.cancel(notificationId);
   }
 
   /// Cancels every notification Medzee has scheduled.
   Future<void> cancelAll() async {
+    if (kIsWeb) return;
     if (!_initialised) await initialize();
     await _plugin.cancelAll();
   }
 
   /// The ids of every notification currently pending on the device.
   Future<List<PendingNotificationRequest>> pendingRequests() async {
+    if (kIsWeb) return const <PendingNotificationRequest>[];
     if (!_initialised) await initialize();
     return _plugin.pendingNotificationRequests();
   }
 
   /// Opens the operating system's settings page for Medzee.
   Future<void> openSettings() async {
+    if (kIsWeb) return;
     await _plugin.show(
       0,
       '',

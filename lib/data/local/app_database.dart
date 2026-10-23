@@ -28,6 +28,7 @@ part 'app_database.g.dart';
     PrescriptionAttachments,
     CaregiverAccess,
     NotificationSchedules,
+    ScheduleAuditLog,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -86,10 +87,9 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Placeholder for the next schema bump. Keeping the hook in place makes
-  /// the migration path obvious and testable.
+  /// v2: the schedule assistant's audit log.
   Future<void> _migrateToV2(Migrator m) async {
-    await m.createAll();
+    await m.createTable(scheduleAuditLog);
   }
 }
 
@@ -98,6 +98,10 @@ QueryExecutor _openConnection() {
     name: 'medzee',
     native: DriftNativeOptions(
       databaseDirectory: getApplicationSupportDirectory,
+    ),
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
     ),
   );
 }

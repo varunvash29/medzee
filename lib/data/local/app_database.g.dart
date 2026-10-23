@@ -11042,6 +11042,587 @@ class NotificationSchedulesCompanion
   }
 }
 
+class $ScheduleAuditLogTable extends ScheduleAuditLog
+    with TableInfo<$ScheduleAuditLogTable, ScheduleAuditRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduleAuditLogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _medicationIdMeta = const VerificationMeta(
+    'medicationId',
+  );
+  @override
+  late final GeneratedColumn<String> medicationId = GeneratedColumn<String>(
+    'medication_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _beforeJsonMeta = const VerificationMeta(
+    'beforeJson',
+  );
+  @override
+  late final GeneratedColumn<String> beforeJson = GeneratedColumn<String>(
+    'before_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _undoneMeta = const VerificationMeta('undone');
+  @override
+  late final GeneratedColumn<bool> undone = GeneratedColumn<bool>(
+    'undone',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("undone" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _resumeOnMeta = const VerificationMeta(
+    'resumeOn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> resumeOn = GeneratedColumn<DateTime>(
+    'resume_on',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resumedMeta = const VerificationMeta(
+    'resumed',
+  );
+  @override
+  late final GeneratedColumn<bool> resumed = GeneratedColumn<bool>(
+    'resumed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("resumed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    medicationId,
+    summary,
+    beforeJson,
+    createdAt,
+    undone,
+    resumeOn,
+    resumed,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'schedule_audit_log';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduleAuditRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('medication_id')) {
+      context.handle(
+        _medicationIdMeta,
+        medicationId.isAcceptableOrUnknown(
+          data['medication_id']!,
+          _medicationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_medicationIdMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_summaryMeta);
+    }
+    if (data.containsKey('before_json')) {
+      context.handle(
+        _beforeJsonMeta,
+        beforeJson.isAcceptableOrUnknown(data['before_json']!, _beforeJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_beforeJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('undone')) {
+      context.handle(
+        _undoneMeta,
+        undone.isAcceptableOrUnknown(data['undone']!, _undoneMeta),
+      );
+    }
+    if (data.containsKey('resume_on')) {
+      context.handle(
+        _resumeOnMeta,
+        resumeOn.isAcceptableOrUnknown(data['resume_on']!, _resumeOnMeta),
+      );
+    }
+    if (data.containsKey('resumed')) {
+      context.handle(
+        _resumedMeta,
+        resumed.isAcceptableOrUnknown(data['resumed']!, _resumedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScheduleAuditRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduleAuditRow(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}id'],
+          )!,
+      kind:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}kind'],
+          )!,
+      medicationId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}medication_id'],
+          )!,
+      summary:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}summary'],
+          )!,
+      beforeJson:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}before_json'],
+          )!,
+      createdAt:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}created_at'],
+          )!,
+      undone:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}undone'],
+          )!,
+      resumeOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}resume_on'],
+      ),
+      resumed:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}resumed'],
+          )!,
+    );
+  }
+
+  @override
+  $ScheduleAuditLogTable createAlias(String alias) {
+    return $ScheduleAuditLogTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduleAuditRow extends DataClass
+    implements Insertable<ScheduleAuditRow> {
+  /// The proposal id, so a proposal can only ever be applied once.
+  final String id;
+  final String kind;
+  final String medicationId;
+  final String summary;
+
+  /// JSON snapshot of what the change replaced (empty when nothing to restore).
+  final String beforeJson;
+  final DateTime createdAt;
+  final bool undone;
+
+  /// For a timed pause: when reminders should come back.
+  final DateTime? resumeOn;
+  final bool resumed;
+  const ScheduleAuditRow({
+    required this.id,
+    required this.kind,
+    required this.medicationId,
+    required this.summary,
+    required this.beforeJson,
+    required this.createdAt,
+    required this.undone,
+    this.resumeOn,
+    required this.resumed,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['kind'] = Variable<String>(kind);
+    map['medication_id'] = Variable<String>(medicationId);
+    map['summary'] = Variable<String>(summary);
+    map['before_json'] = Variable<String>(beforeJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['undone'] = Variable<bool>(undone);
+    if (!nullToAbsent || resumeOn != null) {
+      map['resume_on'] = Variable<DateTime>(resumeOn);
+    }
+    map['resumed'] = Variable<bool>(resumed);
+    return map;
+  }
+
+  ScheduleAuditLogCompanion toCompanion(bool nullToAbsent) {
+    return ScheduleAuditLogCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      medicationId: Value(medicationId),
+      summary: Value(summary),
+      beforeJson: Value(beforeJson),
+      createdAt: Value(createdAt),
+      undone: Value(undone),
+      resumeOn:
+          resumeOn == null && nullToAbsent
+              ? const Value.absent()
+              : Value(resumeOn),
+      resumed: Value(resumed),
+    );
+  }
+
+  factory ScheduleAuditRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduleAuditRow(
+      id: serializer.fromJson<String>(json['id']),
+      kind: serializer.fromJson<String>(json['kind']),
+      medicationId: serializer.fromJson<String>(json['medicationId']),
+      summary: serializer.fromJson<String>(json['summary']),
+      beforeJson: serializer.fromJson<String>(json['beforeJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      undone: serializer.fromJson<bool>(json['undone']),
+      resumeOn: serializer.fromJson<DateTime?>(json['resumeOn']),
+      resumed: serializer.fromJson<bool>(json['resumed']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(kind),
+      'medicationId': serializer.toJson<String>(medicationId),
+      'summary': serializer.toJson<String>(summary),
+      'beforeJson': serializer.toJson<String>(beforeJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'undone': serializer.toJson<bool>(undone),
+      'resumeOn': serializer.toJson<DateTime?>(resumeOn),
+      'resumed': serializer.toJson<bool>(resumed),
+    };
+  }
+
+  ScheduleAuditRow copyWith({
+    String? id,
+    String? kind,
+    String? medicationId,
+    String? summary,
+    String? beforeJson,
+    DateTime? createdAt,
+    bool? undone,
+    Value<DateTime?> resumeOn = const Value.absent(),
+    bool? resumed,
+  }) => ScheduleAuditRow(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    medicationId: medicationId ?? this.medicationId,
+    summary: summary ?? this.summary,
+    beforeJson: beforeJson ?? this.beforeJson,
+    createdAt: createdAt ?? this.createdAt,
+    undone: undone ?? this.undone,
+    resumeOn: resumeOn.present ? resumeOn.value : this.resumeOn,
+    resumed: resumed ?? this.resumed,
+  );
+  ScheduleAuditRow copyWithCompanion(ScheduleAuditLogCompanion data) {
+    return ScheduleAuditRow(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      medicationId:
+          data.medicationId.present
+              ? data.medicationId.value
+              : this.medicationId,
+      summary: data.summary.present ? data.summary.value : this.summary,
+      beforeJson:
+          data.beforeJson.present ? data.beforeJson.value : this.beforeJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      undone: data.undone.present ? data.undone.value : this.undone,
+      resumeOn: data.resumeOn.present ? data.resumeOn.value : this.resumeOn,
+      resumed: data.resumed.present ? data.resumed.value : this.resumed,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleAuditRow(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('medicationId: $medicationId, ')
+          ..write('summary: $summary, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('undone: $undone, ')
+          ..write('resumeOn: $resumeOn, ')
+          ..write('resumed: $resumed')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    kind,
+    medicationId,
+    summary,
+    beforeJson,
+    createdAt,
+    undone,
+    resumeOn,
+    resumed,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduleAuditRow &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.medicationId == this.medicationId &&
+          other.summary == this.summary &&
+          other.beforeJson == this.beforeJson &&
+          other.createdAt == this.createdAt &&
+          other.undone == this.undone &&
+          other.resumeOn == this.resumeOn &&
+          other.resumed == this.resumed);
+}
+
+class ScheduleAuditLogCompanion extends UpdateCompanion<ScheduleAuditRow> {
+  final Value<String> id;
+  final Value<String> kind;
+  final Value<String> medicationId;
+  final Value<String> summary;
+  final Value<String> beforeJson;
+  final Value<DateTime> createdAt;
+  final Value<bool> undone;
+  final Value<DateTime?> resumeOn;
+  final Value<bool> resumed;
+  final Value<int> rowid;
+  const ScheduleAuditLogCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.medicationId = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.beforeJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.undone = const Value.absent(),
+    this.resumeOn = const Value.absent(),
+    this.resumed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScheduleAuditLogCompanion.insert({
+    required String id,
+    required String kind,
+    required String medicationId,
+    required String summary,
+    required String beforeJson,
+    required DateTime createdAt,
+    this.undone = const Value.absent(),
+    this.resumeOn = const Value.absent(),
+    this.resumed = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       medicationId = Value(medicationId),
+       summary = Value(summary),
+       beforeJson = Value(beforeJson),
+       createdAt = Value(createdAt);
+  static Insertable<ScheduleAuditRow> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? medicationId,
+    Expression<String>? summary,
+    Expression<String>? beforeJson,
+    Expression<DateTime>? createdAt,
+    Expression<bool>? undone,
+    Expression<DateTime>? resumeOn,
+    Expression<bool>? resumed,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (medicationId != null) 'medication_id': medicationId,
+      if (summary != null) 'summary': summary,
+      if (beforeJson != null) 'before_json': beforeJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (undone != null) 'undone': undone,
+      if (resumeOn != null) 'resume_on': resumeOn,
+      if (resumed != null) 'resumed': resumed,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScheduleAuditLogCompanion copyWith({
+    Value<String>? id,
+    Value<String>? kind,
+    Value<String>? medicationId,
+    Value<String>? summary,
+    Value<String>? beforeJson,
+    Value<DateTime>? createdAt,
+    Value<bool>? undone,
+    Value<DateTime?>? resumeOn,
+    Value<bool>? resumed,
+    Value<int>? rowid,
+  }) {
+    return ScheduleAuditLogCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      medicationId: medicationId ?? this.medicationId,
+      summary: summary ?? this.summary,
+      beforeJson: beforeJson ?? this.beforeJson,
+      createdAt: createdAt ?? this.createdAt,
+      undone: undone ?? this.undone,
+      resumeOn: resumeOn ?? this.resumeOn,
+      resumed: resumed ?? this.resumed,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (medicationId.present) {
+      map['medication_id'] = Variable<String>(medicationId.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (beforeJson.present) {
+      map['before_json'] = Variable<String>(beforeJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (undone.present) {
+      map['undone'] = Variable<bool>(undone.value);
+    }
+    if (resumeOn.present) {
+      map['resume_on'] = Variable<DateTime>(resumeOn.value);
+    }
+    if (resumed.present) {
+      map['resumed'] = Variable<bool>(resumed.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleAuditLogCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('medicationId: $medicationId, ')
+          ..write('summary: $summary, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('undone: $undone, ')
+          ..write('resumeOn: $resumeOn, ')
+          ..write('resumed: $resumed, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -11070,6 +11651,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $NotificationSchedulesTable notificationSchedules =
       $NotificationSchedulesTable(this);
+  late final $ScheduleAuditLogTable scheduleAuditLog = $ScheduleAuditLogTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11090,6 +11674,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     prescriptionAttachments,
     caregiverAccess,
     notificationSchedules,
+    scheduleAuditLog,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -18671,6 +19256,306 @@ typedef $$NotificationSchedulesTableProcessedTableManager =
       NotificationScheduleRow,
       PrefetchHooks Function({bool medicationId})
     >;
+typedef $$ScheduleAuditLogTableCreateCompanionBuilder =
+    ScheduleAuditLogCompanion Function({
+      required String id,
+      required String kind,
+      required String medicationId,
+      required String summary,
+      required String beforeJson,
+      required DateTime createdAt,
+      Value<bool> undone,
+      Value<DateTime?> resumeOn,
+      Value<bool> resumed,
+      Value<int> rowid,
+    });
+typedef $$ScheduleAuditLogTableUpdateCompanionBuilder =
+    ScheduleAuditLogCompanion Function({
+      Value<String> id,
+      Value<String> kind,
+      Value<String> medicationId,
+      Value<String> summary,
+      Value<String> beforeJson,
+      Value<DateTime> createdAt,
+      Value<bool> undone,
+      Value<DateTime?> resumeOn,
+      Value<bool> resumed,
+      Value<int> rowid,
+    });
+
+class $$ScheduleAuditLogTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduleAuditLogTable> {
+  $$ScheduleAuditLogTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get medicationId => $composableBuilder(
+    column: $table.medicationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get undone => $composableBuilder(
+    column: $table.undone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get resumeOn => $composableBuilder(
+    column: $table.resumeOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get resumed => $composableBuilder(
+    column: $table.resumed,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduleAuditLogTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduleAuditLogTable> {
+  $$ScheduleAuditLogTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get medicationId => $composableBuilder(
+    column: $table.medicationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get undone => $composableBuilder(
+    column: $table.undone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get resumeOn => $composableBuilder(
+    column: $table.resumeOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get resumed => $composableBuilder(
+    column: $table.resumed,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduleAuditLogTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduleAuditLogTable> {
+  $$ScheduleAuditLogTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get medicationId => $composableBuilder(
+    column: $table.medicationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get undone =>
+      $composableBuilder(column: $table.undone, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get resumeOn =>
+      $composableBuilder(column: $table.resumeOn, builder: (column) => column);
+
+  GeneratedColumn<bool> get resumed =>
+      $composableBuilder(column: $table.resumed, builder: (column) => column);
+}
+
+class $$ScheduleAuditLogTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScheduleAuditLogTable,
+          ScheduleAuditRow,
+          $$ScheduleAuditLogTableFilterComposer,
+          $$ScheduleAuditLogTableOrderingComposer,
+          $$ScheduleAuditLogTableAnnotationComposer,
+          $$ScheduleAuditLogTableCreateCompanionBuilder,
+          $$ScheduleAuditLogTableUpdateCompanionBuilder,
+          (
+            ScheduleAuditRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ScheduleAuditLogTable,
+              ScheduleAuditRow
+            >,
+          ),
+          ScheduleAuditRow,
+          PrefetchHooks Function()
+        > {
+  $$ScheduleAuditLogTableTableManager(
+    _$AppDatabase db,
+    $ScheduleAuditLogTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () =>
+                  $$ScheduleAuditLogTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () => $$ScheduleAuditLogTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer:
+              () => $$ScheduleAuditLogTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> medicationId = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<String> beforeJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> undone = const Value.absent(),
+                Value<DateTime?> resumeOn = const Value.absent(),
+                Value<bool> resumed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduleAuditLogCompanion(
+                id: id,
+                kind: kind,
+                medicationId: medicationId,
+                summary: summary,
+                beforeJson: beforeJson,
+                createdAt: createdAt,
+                undone: undone,
+                resumeOn: resumeOn,
+                resumed: resumed,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String kind,
+                required String medicationId,
+                required String summary,
+                required String beforeJson,
+                required DateTime createdAt,
+                Value<bool> undone = const Value.absent(),
+                Value<DateTime?> resumeOn = const Value.absent(),
+                Value<bool> resumed = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduleAuditLogCompanion.insert(
+                id: id,
+                kind: kind,
+                medicationId: medicationId,
+                summary: summary,
+                beforeJson: beforeJson,
+                createdAt: createdAt,
+                undone: undone,
+                resumeOn: resumeOn,
+                resumed: resumed,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduleAuditLogTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScheduleAuditLogTable,
+      ScheduleAuditRow,
+      $$ScheduleAuditLogTableFilterComposer,
+      $$ScheduleAuditLogTableOrderingComposer,
+      $$ScheduleAuditLogTableAnnotationComposer,
+      $$ScheduleAuditLogTableCreateCompanionBuilder,
+      $$ScheduleAuditLogTableUpdateCompanionBuilder,
+      (
+        ScheduleAuditRow,
+        BaseReferences<_$AppDatabase, $ScheduleAuditLogTable, ScheduleAuditRow>,
+      ),
+      ScheduleAuditRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -18714,4 +19599,6 @@ class $AppDatabaseManager {
       $$CaregiverAccessTableTableManager(_db, _db.caregiverAccess);
   $$NotificationSchedulesTableTableManager get notificationSchedules =>
       $$NotificationSchedulesTableTableManager(_db, _db.notificationSchedules);
+  $$ScheduleAuditLogTableTableManager get scheduleAuditLog =>
+      $$ScheduleAuditLogTableTableManager(_db, _db.scheduleAuditLog);
 }

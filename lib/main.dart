@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,7 +44,7 @@ Future<void> main() async {
 
   // Push is best-effort: permission denial or an absent config must never
   // block startup.
-  if (firebase.isAvailable) {
+  if (firebase.isAvailable && !kIsWeb) {
     container.read(pushServiceProvider).initialize().catchError(
           (Object _) => PushStatus.unavailable,
         );
@@ -94,6 +95,12 @@ Future<void> main() async {
   // background execution must never leave the user without reminders. Never
   // blocks startup.
   container.read(scheduleServiceProvider).reconcileAll().catchError(
+        (Object _) => null,
+      );
+  container.read(scheduleChangeServiceProvider).applyDueResumes().catchError(
+        (Object _) => 0,
+      );
+  container.read(cloudSyncControllerProvider).restore().catchError(
         (Object _) => null,
       );
 }

@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import '../firebase_options.dart';
 import 'notification_action_dispatcher.dart';
 import 'notification_service.dart';
 
@@ -28,7 +29,11 @@ class FirebaseGateway {
   /// degrades to an unavailable gateway instead of crashing startup.
   static Future<FirebaseGateway> tryInitialize() async {
     try {
-      await Firebase.initializeApp();
+      final FirebaseOptions? options = DefaultFirebaseOptions.currentPlatform;
+      if (options == null) {
+        return const FirebaseGateway._(false);
+      }
+      await Firebase.initializeApp(options: options);
       debugPrint('Firebase: initialised.');
       return const FirebaseGateway._(true);
     } catch (error) {

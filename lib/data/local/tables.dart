@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 /// Schema version. Bump this whenever [AppDatabase.migration] changes.
-const int kDatabaseSchemaVersion = 1;
+const int kDatabaseSchemaVersion = 2;
 
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
@@ -314,6 +314,28 @@ class CaregiverAccess extends Table {
   BoolColumn get canEdit => boolean()();
   DateTimeColumn get grantedAt => dateTime()();
   DateTimeColumn get expiresAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}
+
+/// Every change the schedule assistant applied, with what is needed to undo it.
+@DataClassName('ScheduleAuditRow')
+class ScheduleAuditLog extends Table {
+  /// The proposal id, so a proposal can only ever be applied once.
+  TextColumn get id => text()();
+  TextColumn get kind => text()();
+  TextColumn get medicationId => text()();
+  TextColumn get summary => text()();
+
+  /// JSON snapshot of what the change replaced (empty when nothing to restore).
+  TextColumn get beforeJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get undone => boolean().withDefault(const Constant(false))();
+
+  /// For a timed pause: when reminders should come back.
+  DateTimeColumn get resumeOn => dateTime().nullable()();
+  BoolColumn get resumed => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};

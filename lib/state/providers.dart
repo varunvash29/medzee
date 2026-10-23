@@ -13,7 +13,11 @@ import '../domain/repositories/notification_schedule_repository.dart';
 import '../domain/repositories/profile_repository.dart';
 import '../domain/services/local_time_converter.dart';
 import '../services/dose_service.dart';
+import '../services/ai/prescription_extractor.dart';
+import '../services/ai/schedule_assistant.dart';
+import '../services/schedule_change_service.dart';
 import '../services/firebase_service.dart';
+import '../services/sync/cloud_sync_controller.dart';
 import '../services/medication_service.dart';
 import '../services/medicine_info_service.dart';
 import '../services/notification_service.dart';
@@ -159,4 +163,43 @@ final Provider<PushService> pushServiceProvider = Provider<PushService>(
 final Provider<FirebaseAuthService> firebaseAuthServiceProvider =
     Provider<FirebaseAuthService>(
   (Ref ref) => FirebaseAuthService(ref.watch(firebaseGatewayProvider)),
+);
+
+/// Optional cloud mirror of the local database (Firestore). Off until the
+/// user switches it on in Profile.
+final ChangeNotifierProvider<CloudSyncController> cloudSyncControllerProvider =
+    ChangeNotifierProvider<CloudSyncController>(
+  (Ref ref) => CloudSyncController(
+    ref.watch(appDatabaseProvider),
+    ref.watch(firebaseGatewayProvider),
+    ref.watch(firebaseAuthServiceProvider),
+    onRemoteApplied: () => ref.read(scheduleServiceProvider).reconcileAll(),
+  ),
+);
+
+/// Reads prescriptions with Gemini through Firebase AI Logic.
+final Provider<PrescriptionExtractor> prescriptionExtractorProvider =
+    Provider<PrescriptionExtractor>(
+  (Ref ref) => GeminiPrescriptionExtractor(
+    available: ref.watch(firebaseGatewayProvider).isAvailable,
+  ),
+);
+
+/// Understands plain-language schedule requests (proposals only).
+final Provider<ScheduleAssistant> scheduleAssistantProvider =
+    Provider<ScheduleAssistant>(
+  (Ref ref) => GeminiScheduleAssistant(
+    available: ref.watch(firebaseGatewayProvider).isAvailable,
+  ),
+);
+
+/// Applies confirmed proposals, with an audit trail and undo.
+final Provider<ScheduleChangeService> scheduleChangeServiceProvider =
+    Provider<ScheduleChangeService>(
+  (Ref ref) => ScheduleChangeService(
+    database: ref.watch(appDatabaseProvider),
+    medications: ref.watch(medicationRepositoryProvider),
+    inventory: ref.watch(inventoryRepositoryProvider),
+    medicationService: ref.watch(medicationServiceProvider),
+  ),
 );

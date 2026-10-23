@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../presentation/assistant/assistant_screen.dart';
 import '../presentation/calendar/calendar_screen.dart';
 import '../presentation/home/home_screen.dart';
 import '../presentation/insights/insights_screen.dart';
@@ -8,6 +9,7 @@ import '../presentation/medicines/add_medicine_screen.dart';
 import '../presentation/medicines/medicine_detail_screen.dart';
 import '../presentation/medicines/medicines_screen.dart';
 import '../presentation/onboarding/onboarding_screen.dart';
+import '../presentation/prescription/scan_prescription_screen.dart';
 import '../presentation/profile/profile_screen.dart';
 import '../presentation/shell/app_shell.dart';
 
@@ -20,6 +22,8 @@ abstract final class AppRoutes {
   static const String insights = '/insights';
   static const String profile = '/profile';
   static const String addMedicine = '/medicines/new';
+  static const String scanPrescription = '/medicines/scan';
+  static const String assistant = '/medicines/assistant';
   static const String medicineDetail = '/medicines/:id';
 }
 
@@ -76,6 +80,16 @@ GoRouter createAppRouter({
                     path: 'new',
                     builder: (BuildContext context, GoRouterState state) =>
                         const AddMedicineScreen(),
+                  ),
+                  GoRoute(
+                    path: 'assistant',
+                    builder: (BuildContext context, GoRouterState state) =>
+                        const AssistantScreen(),
+                  ),
+                  GoRoute(
+                    path: 'scan',
+                    builder: (BuildContext context, GoRouterState state) =>
+                        const ScanPrescriptionScreen(),
                   ),
                   GoRoute(
                     path: ':id',

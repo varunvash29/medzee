@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Medzee stores one person's data under /vaults/{vaultId}. The vaultId is a
+// random 128-bit value generated on the first device and entered on others;
+// knowing it is the access key. There is deliberately no rule for listing
+// /vaults itself, so vault ids cannot be discovered.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /vaults/{vaultId}/{table}/{rowId} {
+      allow read, write: if request.auth != null
+                         && vaultId.size() >= 32
+                         && vaultId.size() <= 64;
+    }
+  }
+}

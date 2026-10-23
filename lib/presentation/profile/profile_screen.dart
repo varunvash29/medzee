@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'cloud_sync_card.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -110,6 +111,8 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SectionHeader(title: 'Cloud sync'),
+            const CloudSyncCard(),
             const SectionHeader(title: 'Privacy & data'),
             AppCard(
               padding: EdgeInsets.zero,

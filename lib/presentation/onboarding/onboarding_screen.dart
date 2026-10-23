@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../profile/cloud_sync_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../services/notification_service.dart';
 import '../../state/profile_providers.dart';
 import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
+import '../shared/medzee_logo.dart';
 
 /// First-run experience: explains what Medzee does and what it will never do,
 /// then creates the local profile and asks for notification permission.
@@ -101,6 +103,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  /// Joins an existing cloud vault, then waits for its profile to arrive.
+  Future<void> _joinWithCode() async {
+    final bool joined = await showJoinVaultDialog(context, ref);
+    if (!joined || !mounted) return;
+    setState(() => _busy = true);
+    for (int i = 0; i < 40; i++) {
+      if (!mounted) return;
+      if (ref.read(profileProvider).value?.onboardingCompleted ?? false) {
+        context.go(AppRoutes.home);
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+    if (mounted) {
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No synced data found for that code yet.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -110,14 +135,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: TextButton(
-                  onPressed: _busy ? null : _finish,
-                  child: const Text('Skip'),
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xxl,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
+              child: Row(
+                children: <Widget>[
+                  MedzeeMark.tile(size: 34),
+                  const SizedBox(width: AppSpacing.sm),
+                  const MedzeeWordmark(fontSize: 20),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _busy ? null : _joinWithCode,
+                    child: const Text('Have a code?'),
+                  ),
+                  TextButton(
+                    onPressed: _busy ? null : _finish,
+                    child: const Text('Skip'),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -209,16 +248,16 @@ class _PageView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Container(
-            width: 76,
-            height: 76,
+            width: 112,
+            height: 112,
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(AppRadii.lg),
+              borderRadius: BorderRadius.circular(36),
             ),
             child: Icon(
               page.icon,
-              size: 38,
-              color: theme.colorScheme.onPrimaryContainer,
+              size: 52,
+              color: theme.colorScheme.primary,
             ),
           )
               .animate()
@@ -231,7 +270,7 @@ class _PageView extends StatelessWidget {
               .then()
               .shimmer(
                 duration: const Duration(milliseconds: 700),
-                color: AppColors.tealBright.withValues(alpha: 0.25),
+                color: AppColors.brandBright.withValues(alpha: 0.25),
               ),
           const SizedBox(height: AppSpacing.xxl),
           Text(page.title, style: theme.textTheme.headlineMedium)
