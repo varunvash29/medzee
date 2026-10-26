@@ -87,7 +87,12 @@ Four steps — *About the medicine → How and when → Stock → Review* — wi
 
 - **Timezone-correct scheduling.** Doses are generated in wall-clock time and
   converted through the IANA timezone database, so reminders survive
-  daylight-saving transitions and travel.
+  daylight-saving transitions.
+- **Travel mode.** Reminders can stay on your own ("home") time zone while your
+  phone is somewhere else, with both clocks shown. Pick any time zone, switch it
+  on or off in Profile, or accept the offer on Home when the phone changes zone.
+- **Several people, one app.** Each person has their own medicines, reminders and
+  sync code; switch between them from Home or Profile.
 - **Exact alarms** on Android (`SCHEDULE_EXACT_ALARM`), pre-reminders, missed-dose
   follow-ups, quiet hours, and a daily summary — all configurable per profile.
 - **Actionable notifications.** Take / skip straight from the notification via a
@@ -286,8 +291,6 @@ debug signing only.
   untested until validated on device.
 - **Barcode scanning & photo capture** use `mobile_scanner` / `image_picker`
   with graceful fallbacks, but are best verified on a physical device.
-- **Single profile.** The data model is profile-ready, but the UI manages one
-  local profile. Multi-user support is a schema-compatible addition.
 - **Medicine-info coverage is INN/generic-based.** Indian brand names aren't
   in openFDA; search by the generic name printed on the strip (always present
   by law). No India-specific public API exists to plug in instead.

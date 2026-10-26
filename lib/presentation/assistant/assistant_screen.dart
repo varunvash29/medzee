@@ -4,13 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_status_colors.dart';
+import '../../domain/models/dose.dart';
 import '../../domain/models/medication.dart';
+import '../../domain/services/assistant_context_builder.dart';
+import '../../domain/services/reminder_clock.dart';
 import '../../domain/models/schedule_proposal.dart';
 import '../../domain/services/schedule_proposal_service.dart';
 import '../../services/ai/schedule_assistant.dart';
 import '../../services/schedule_change_service.dart';
 import '../../state/medications_provider.dart';
 import '../../state/providers.dart';
+import '../../state/timezone_providers.dart';
 import '../shared/app_widgets.dart';
 
 enum _Phase { pending, applying, applied, cancelled, failed, undone }
@@ -49,15 +53,17 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   final ScrollController _scroll = ScrollController();
   final List<_Msg> _messages = <_Msg>[
     _Text(
-      'Hi! Tell me what to change, like “remind me at 8 AM every day” or '
-      '“pause my vitamin until Monday”. I\'ll show you the change first. '
-      'Nothing happens until you confirm.',
+      'Hi! Ask me about your medicines, like “what do I take tonight?” or '
+      '“how many tablets are left?”. Or tell me what to change, like “remind '
+      'me at 8 AM every day” or “pause my vitamin until Monday”. I\'ll show '
+      'you a change first. Nothing happens until you confirm.',
       fromUser: false,
     ),
   ];
   bool _thinking = false;
 
   static const List<String> _suggestions = <String>[
+    'What do I take today?',
     'Add a daily reminder',
     'Change a reminder time',
     'Pause a medicine',
@@ -65,6 +71,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   ];
 
   static const Map<String, String> _starters = <String, String>{
+    'What do I take today?': 'What do I still need to take today?',
     'Add a daily reminder': 'Remind me at 8 AM every day for ',
     'Change a reminder time': 'Move my evening reminder for ',
     'Pause a medicine': 'Pause reminders for ',
@@ -92,10 +99,50 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   Future<List<MedicationContext>> _contexts() async {
     final repo = ref.read(medicationRepositoryProvider);
     final List<Medication> all = await repo.getAll();
+    final inventory = ref.read(inventoryRepositoryProvider);
     return <MedicationContext>[
       for (final Medication m in all)
-        MedicationContext(m, await repo.getPhases(m.id)),
+        MedicationContext(
+          m,
+          await repo.getPhases(m.id),
+          inventory: await inventory.getInventory(m.id),
+        ),
     ];
+  }
+
+  /// Everything the assistant may use to answer: the person's medicines,
+  /// schedules, stock and recent doses, in their reminder time zone.
+  Future<String> _briefing(List<MedicationContext> meds) async {
+    final ReminderClock clock = ref.read(reminderClockProvider);
+    final DateTime today = clock.today();
+    final List<ScheduledDose> doses =
+        await ref.read(doseRepositoryProvider).getDosesInRange(
+              DateTime(today.year, today.month, today.day - 7),
+              DateTime(today.year, today.month, today.day + 1),
+            );
+    final String zone = ref.read(reminderZoneIdProvider);
+    final TravelStatus travel = ref.read(travelStatusProvider);
+    final DateTime now = clock.now();
+    final String hh = now.hour.toString().padLeft(2, '0');
+    final String mm = now.minute.toString().padLeft(2, '0');
+    final StringBuffer out = StringBuffer()
+      ..writeln("Current time in the person's reminder time zone ($zone): "
+          '$hh:$mm.');
+    if (travel.holding) {
+      out.writeln(
+        'Travel mode is on: the phone is in ${travel.deviceZoneId}, but '
+        'reminders stay on $zone time.',
+      );
+    }
+    out.write(
+      AssistantContextBuilder.build(
+        medications: meds,
+        doses: doses,
+        today: today,
+        nowUtc: clock.nowUtc(),
+      ),
+    );
+    return out.toString();
   }
 
   Future<void> _send() async {
@@ -119,16 +166,19 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                 text,
                 medications: meds,
                 history: history,
-                now: DateTime.now(),
+                now: ref.read(reminderClockProvider).now(),
+                briefing: await _briefing(meds),
               );
       final ProposalCheck check = ScheduleProposalService.check(
         proposal,
         meds,
-        today: DateTime.now(),
+        today: ref.read(reminderClockProvider).today(),
       );
       if (!mounted) return;
       setState(() {
-        if (check.clarification != null) {
+        if (check.answer != null) {
+          _messages.add(_Text(check.answer!, fromUser: false));
+        } else if (check.clarification != null) {
           _messages.add(_Text(check.clarification!, fromUser: false));
         } else if (check.errors.isNotEmpty && check.lines.isEmpty) {
           _messages.add(_Text(check.errors.first, fromUser: false));
@@ -151,7 +201,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     final ProposalCheck fresh = ScheduleProposalService.check(
       m.proposal,
       meds,
-      today: DateTime.now(),
+      today: ref.read(reminderClockProvider).today(),
     );
     if (!fresh.canApply) {
       setState(() {
@@ -245,7 +295,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     final ProposalCheck check = ScheduleProposalService.check(
       changed,
       meds,
-      today: DateTime.now(),
+      today: ref.read(reminderClockProvider).today(),
     );
     if (!mounted) return;
     setState(() {

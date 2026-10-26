@@ -58,7 +58,8 @@ class CloudSyncCard extends ConsumerWidget {
             leading: const Icon(Icons.link_rounded),
             title: const Text('Join with a code'),
             subtitle: const Text(
-              'Replace this device\'s data with your synced data',
+              'Replace this person\'s data on this device with their synced '
+              'data',
             ),
             onTap: () => showJoinVaultDialog(context, ref),
           ),
@@ -112,9 +113,10 @@ class CloudSyncCard extends ConsumerWidget {
             Text('Your sync code', style: Theme.of(ctx).textTheme.titleLarge),
             const SizedBox(height: AppSpacing.sm),
             const Text(
-              'Anyone with this code can read and change your medicine data. '
-              'Enter it on your other device under Profile → Join with a '
-              'code. Do not share it.',
+              'Anyone with this code can read and change this person\'s '
+              'medicine data. Enter it on their other device under Profile → '
+              'Join with a code. Everyone using Medzee has their own code. '
+              'Do not share it.',
             ),
             const SizedBox(height: AppSpacing.lg),
             SelectableText(
@@ -152,8 +154,8 @@ Future<bool> showJoinVaultDialog(BuildContext context, WidgetRef ref) async {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           const Text(
-            'Medicines and history on this device will be replaced by the '
-            'synced copy.',
+            'This person\'s medicines and history on this device will be '
+            'replaced by the synced copy.',
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(

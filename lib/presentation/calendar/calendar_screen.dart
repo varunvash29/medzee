@@ -14,7 +14,9 @@ import '../../state/doses_provider.dart';
 import '../../state/medications_provider.dart';
 import '../../state/providers.dart';
 import '../shared/app_widgets.dart';
+import '../../state/timezone_providers.dart';
 import '../shared/motion_widgets.dart';
+import '../shared/travel_widgets.dart';
 
 const List<String> _weekdayLetters = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const List<String> _months = <String>[
@@ -115,7 +117,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final DateTime selected = ref.watch(selectedDateProvider);
-    final DateTime today = _day(DateTime.now());
+    // "Today" is the day in the reminder time zone: that is where doses are filed.
+    final DateTime today = ref.watch(reminderClockProvider).today();
     final AsyncValue<List<ScheduledDose>> doses =
         ref.watch(dosesForDateProvider(selected));
 
@@ -370,7 +373,7 @@ class _DayCell extends ConsumerWidget {
 
 // ---------------------------------------------------------------- day view
 
-class _DayView extends StatelessWidget {
+class _DayView extends ConsumerWidget {
   const _DayView({
     required this.date,
     required this.isToday,
@@ -382,9 +385,16 @@ class _DayView extends StatelessWidget {
   final List<ScheduledDose> doses;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final AppStatusColors status = context.statusColors;
+
+    // Cancelled doses (a paused or stopped medicine) are listed so they can
+    // be removed, but they are not part of the day's count.
+    final List<ScheduledDose> cancelledDoses = doses
+        .where((ScheduledDose d) => d.status == DoseStatus.cancelled)
+        .toList(growable: false);
+    final int cancelled = cancelledDoses.length;
 
     final int taken =
         doses.where((ScheduledDose d) => d.status == DoseStatus.taken).length;
@@ -392,7 +402,7 @@ class _DayView extends StatelessWidget {
         doses.where((ScheduledDose d) => d.status == DoseStatus.missed).length;
     final int skipped =
         doses.where((ScheduledDose d) => d.status == DoseStatus.skipped).length;
-    final int total = doses.length;
+    final int total = doses.length - cancelled;
 
     // Group by time of day, oldest first: a timeline of the day.
     final Map<int, List<ScheduledDose>> byTime = <int, List<ScheduledDose>>{};
@@ -401,8 +411,7 @@ class _DayView extends StatelessWidget {
     }
     final List<int> times = byTime.keys.toList()..sort();
 
-    final DateTime now = DateTime.now();
-    final int nowMinutes = now.hour * 60 + now.minute;
+    final int nowMinutes = ref.watch(reminderClockProvider).minutesOfDay;
     int? nowBefore; // index of the first group after "now"
     if (isToday) {
       nowBefore = times.indexWhere((int t) => t > nowMinutes);
@@ -431,6 +440,25 @@ class _DayView extends StatelessWidget {
                   '${skipped > 0 ? ' · $skipped skipped' : ''}',
           style: theme.textTheme.bodySmall,
         ),
+        if (cancelled > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    '$cancelled cancelled (not counted)',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _removeCancelled(context, ref, cancelledDoses),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Remove'),
+                ),
+              ],
+            ),
+          ),
         if (total > 0) ...<Widget>[
           const SizedBox(height: AppSpacing.sm),
           ClipRRect(
@@ -461,7 +489,7 @@ class _DayView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.xl),
-        if (total == 0)
+        if (doses.isEmpty)
           const EmptyState(
             icon: Icons.event_available_outlined,
             title: 'No doses on this day',
@@ -470,27 +498,53 @@ class _DayView extends StatelessWidget {
           )
         else
           for (int i = 0; i < times.length; i++) ...<Widget>[
-            if (nowBefore == i) const _NowMarker(),
+            if (nowBefore == i) _NowMarker(minutes: nowMinutes),
             _TimelineGroup(
               minutes: times[i],
               doses: byTime[times[i]]!,
               isLast: i == times.length - 1 && nowBefore != times.length,
             ),
           ],
-        if (isToday && nowBefore == times.length && total > 0) const _NowMarker(),
+        if (isToday && nowBefore == times.length && doses.isNotEmpty) _NowMarker(minutes: nowMinutes),
       ],
     );
   }
 }
 
+Future<void> _removeCancelled(
+  BuildContext context,
+  WidgetRef ref,
+  List<ScheduledDose> cancelled,
+) async {
+  final int removed =
+      await ref.read(doseActionsProvider).removeCancelled(cancelled);
+  if (!context.mounted || removed == 0) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          removed == 1
+              ? 'Removed 1 cancelled dose from the calendar'
+              : 'Removed $removed cancelled doses from the calendar',
+        ),
+      ),
+    );
+}
+
 class _NowMarker extends StatelessWidget {
-  const _NowMarker();
+  const _NowMarker({required this.minutes});
+
+  /// Minutes since midnight in the reminder time zone.
+  final int minutes;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final Color c = theme.colorScheme.primary;
-    final String time = TimeOfDay.now().format(context);
+    final String time =
+        TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60).format(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
@@ -536,12 +590,17 @@ class _TimelineGroup extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final AppStatusColors status = context.statusColors;
 
-    final bool allTaken =
-        doses.every((ScheduledDose d) => d.status == DoseStatus.taken);
+    // A cancelled dose says nothing about how the rest of the time went.
+    final List<ScheduledDose> live = doses
+        .where((ScheduledDose d) => d.status != DoseStatus.cancelled)
+        .toList(growable: false);
+    final bool allCancelled = live.isEmpty;
+    final bool allTaken = !allCancelled &&
+        live.every((ScheduledDose d) => d.status == DoseStatus.taken);
     final bool anyMissed =
-        doses.any((ScheduledDose d) => d.status == DoseStatus.missed);
-    final bool allSkipped =
-        doses.every((ScheduledDose d) => d.status == DoseStatus.skipped);
+        live.any((ScheduledDose d) => d.status == DoseStatus.missed);
+    final bool allSkipped = !allCancelled &&
+        live.every((ScheduledDose d) => d.status == DoseStatus.skipped);
 
     final Color nodeColor = allTaken
         ? status.taken
@@ -549,7 +608,9 @@ class _TimelineGroup extends StatelessWidget {
             ? status.missed
             : allSkipped
                 ? status.skipped
-                : theme.colorScheme.primary;
+                : allCancelled
+                    ? theme.colorScheme.outline
+                    : theme.colorScheme.primary;
     final bool filled = allTaken || anyMissed || allSkipped;
     final IconData? nodeIcon = allTaken
         ? Icons.check_rounded
@@ -683,6 +744,7 @@ class _CalendarDoseRow extends ConsumerWidget {
                     '${dose.doseQuantity == 1 ? '' : 's'}',
                     style: theme.textTheme.bodySmall,
                   ),
+                  DeviceTimeNote(scheduledAt: dose.scheduledAt),
                 ],
               ),
             ),
@@ -699,6 +761,10 @@ class _CalendarDoseRow extends ConsumerWidget {
     Medication? medication,
   ) async {
     if (medication == null) return;
+    if (dose.status == DoseStatus.cancelled) {
+      await _showCancelledActions(context, ref, medication);
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -754,6 +820,70 @@ class _CalendarDoseRow extends ConsumerWidget {
               onTap: () async {
                 Navigator.of(ctx).pop();
                 await ref.read(doseActionsProvider).undo(dose);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.medication_outlined),
+              title: const Text('Open medicine'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/medicines/${medication.id}');
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A cancelled dose cannot be taken or skipped: it can only be removed from
+  /// the listing (it comes back if the medicine's reminders are resumed).
+  Future<void> _showCancelledActions(
+    BuildContext context,
+    WidgetRef ref,
+    Medication medication,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                0,
+                AppSpacing.gutter,
+                AppSpacing.xs,
+              ),
+              child: Text(
+                medication.name,
+                style: Theme.of(ctx).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                0,
+                AppSpacing.gutter,
+                AppSpacing.md,
+              ),
+              child: Text(
+                'This dose was cancelled, so it is not counted.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Remove from calendar'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _removeCancelled(context, ref, <ScheduledDose>[dose]);
               },
             ),
             ListTile(

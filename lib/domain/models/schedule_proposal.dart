@@ -6,6 +6,10 @@ enum ScheduleIntent {
   resume,
   updateStock,
 
+  /// A question about the person's own medicines, schedule or stock. Nothing
+  /// changes; [ScheduleProposal.answer] holds the reply.
+  answer,
+
   /// The request is too vague to act on; [ScheduleProposal.clarification]
   /// holds the question to ask.
   clarify,
@@ -54,6 +58,7 @@ class ScheduleProposal {
     this.stockQuantity,
     this.stockMode,
     this.clarification,
+    this.answer,
     this.summary,
   });
 
@@ -77,6 +82,9 @@ class ScheduleProposal {
 
   /// A question for the user when something is missing.
   final String? clarification;
+
+  /// The reply to a question ([ScheduleIntent.answer]).
+  final String? answer;
 
   /// The model's one-line description, shown only as a hint.
   final String? summary;
@@ -105,6 +113,7 @@ class ScheduleProposal {
       stockQuantity: stockQuantity ?? this.stockQuantity,
       stockMode: stockMode ?? this.stockMode,
       clarification: clarification,
+      answer: answer,
       summary: summary,
     );
   }

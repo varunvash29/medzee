@@ -6,15 +6,16 @@ import '../domain/models/medication.dart';
 import '../domain/services/dose_status_resolver.dart';
 import 'medications_provider.dart';
 import 'providers.dart';
+import 'timezone_providers.dart';
 
 /// The calendar date the app currently treats as "today".
 ///
 /// Kept as an explicit provider so every screen agrees on the day boundary
 /// and so tests can pin it.
-final Provider<DateTime> todayProvider = Provider<DateTime>((Ref ref) {
-  final DateTime now = DateTime.now();
-  return DateTime(now.year, now.month, now.day);
-});
+final Provider<DateTime> todayProvider = Provider<DateTime>(
+  // The day in the person's reminder time zone: doses are filed under it.
+  (Ref ref) => ref.watch(reminderClockProvider).today(),
+);
 
 /// Doses scheduled for [todayProvider]'s date, with grace-window statuses
 /// resolved on the way out.
@@ -128,10 +129,7 @@ final NotifierProvider<SelectedDateNotifier, DateTime> selectedDateProvider =
 
 class SelectedDateNotifier extends Notifier<DateTime> {
   @override
-  DateTime build() {
-    final DateTime now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
-  }
+  DateTime build() => ref.read(reminderClockProvider).today();
 
   void select(DateTime date) => state = DateTime(date.year, date.month, date.day);
 
@@ -140,8 +138,5 @@ class SelectedDateNotifier extends Notifier<DateTime> {
 
   void goToNext() => state = DateTime(state.year, state.month, state.day + 1);
 
-  void goToToday() {
-    final DateTime now = DateTime.now();
-    state = DateTime(now.year, now.month, now.day);
-  }
+  void goToToday() => state = ref.read(reminderClockProvider).today();
 }

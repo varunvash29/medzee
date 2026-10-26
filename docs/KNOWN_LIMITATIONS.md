@@ -30,10 +30,15 @@ what it does. Also see "not integrated by design" in
 
 ## Product scope
 
-- **Single local profile.** The schema and repository contracts are
-  profile-ready, but the UI manages one profile. Multiple users on one device
-  (e.g. a shared tablet in a care setting) is a schema-compatible addition,
-  not yet built.
+- **People on one device are separate, not linked.** Each person has their own
+  database, settings and sync code. Their reminders are topped up whenever the
+  app starts or someone is switched to, but a person who is not open does not
+  receive cloud changes until they are opened. Removing a person deletes their
+  data from the device only; their cloud copy stays and their sync code brings
+  it back.
+- **Travel mode keeps one reminder zone per person.** Quiet hours and the
+  daily summary are not zone-aware yet, and "resume on" dates for paused
+  medicines use the phone's calendar day.
 - **Insights are on-screen only.** No PDF/CSV export of adherence reports yet.
 - **Medicine-info coverage is INN/generic-based.** Lookups work correctly for
   any medicine searched by its INN generic name (the name Indian law requires
@@ -41,8 +46,8 @@ what it does. Also see "not integrated by design" in
   openFDA database; the UI steers users to the generic name and shows "no
   label information found" rather than guessing. No free India-specific public
   API exists to plug in instead.
-- **No cloud sync / multi-device.** All data lives on-device in SQLite.
-  Uninstalling deletes it (standard platform behaviour).
+- **Cloud sync is optional.** Without it, all data lives on-device in SQLite and
+  uninstalling deletes it (standard platform behaviour).
 
 ## Testing caveats
 

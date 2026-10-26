@@ -76,6 +76,7 @@ class ScheduleChangeService {
         return _resume(p, med);
       case ScheduleIntent.updateStock:
         return _stock(p, med);
+      case ScheduleIntent.answer:
       case ScheduleIntent.clarify:
       case ScheduleIntent.unsupported:
         throw const ScheduleChangeException('Nothing to apply.');

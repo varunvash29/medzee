@@ -106,11 +106,25 @@ class MedicationService {
     await _doses.cancelFutureDoses(medication.id, DateTime.now().toUtc());
   }
 
-  /// Permanently removes a medication and everything attached to it.
+  /// Deletes a medication.
+  ///
+  /// Whatever is still ahead (future doses, cancelled doses, reminders, stock)
+  /// goes. If the medicine has any history, the medicine itself stays as an
+  /// archived record so its past doses remain in the calendar and insights;
+  /// removing the row would wipe them with it. A medicine that was never
+  /// taken is removed outright.
   Future<void> delete(Medication medication) async {
     await _schedule.cancelMedicationNotifications(medication.id);
+    final bool hasHistory =
+        await _doses.hasPastActivity(medication.id, DateTime.now());
+    if (!hasHistory) {
+      await _inventory.deleteInventory(medication.id);
+      await _medications.delete(medication.id);
+      return;
+    }
+    await _doses.deleteOpenFutureDoses(medication.id, DateTime.now());
     await _inventory.deleteInventory(medication.id);
-    await _medications.delete(medication.id);
+    await _medications.setStatus(medication.id, MedicationStatus.archived);
   }
 
   /// Adds stock to a medication and records the movement.

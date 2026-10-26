@@ -94,6 +94,16 @@ class DoseService {
     );
   }
 
+  /// Removes cancelled doses from the calendar. Only doses that are still
+  /// cancelled are touched, so a dose that was taken or revived in the
+  /// meantime can never be deleted by a stale list.
+  Future<int> removeCancelled(Iterable<ScheduledDose> doses) {
+    return _doses.deleteDoses(<String>[
+      for (final ScheduledDose d in doses)
+        if (d.status == DoseStatus.cancelled) d.id,
+    ]);
+  }
+
   /// Returns a dose to the pending state and reverses any stock movement.
   Future<DoseLogResult> undo(ScheduledDose dose, Medication medication) async {
     final DoseLog? existing = await _doses.getActiveLog(dose.id);

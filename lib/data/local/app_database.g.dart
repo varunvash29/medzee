@@ -40,6 +40,21 @@ class $UserProfilesTable extends UserProfiles
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _travelModeMeta = const VerificationMeta(
+    'travelMode',
+  );
+  @override
+  late final GeneratedColumn<bool> travelMode = GeneratedColumn<bool>(
+    'travel_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("travel_mode" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _timeFormatMeta = const VerificationMeta(
     'timeFormat',
   );
@@ -281,6 +296,7 @@ class $UserProfilesTable extends UserProfiles
     id,
     displayName,
     timezoneId,
+    travelMode,
     timeFormat,
     themeMode,
     notificationsEnabled,
@@ -332,6 +348,12 @@ class $UserProfilesTable extends UserProfiles
       context.handle(
         _timezoneIdMeta,
         timezoneId.isAcceptableOrUnknown(data['timezone_id']!, _timezoneIdMeta),
+      );
+    }
+    if (data.containsKey('travel_mode')) {
+      context.handle(
+        _travelModeMeta,
+        travelMode.isAcceptableOrUnknown(data['travel_mode']!, _travelModeMeta),
       );
     }
     if (data.containsKey('time_format')) {
@@ -549,6 +571,11 @@ class $UserProfilesTable extends UserProfiles
         DriftSqlType.string,
         data['${effectivePrefix}timezone_id'],
       ),
+      travelMode:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}travel_mode'],
+          )!,
       timeFormat:
           attachedDatabase.typeMapping.read(
             DriftSqlType.string,
@@ -658,7 +685,13 @@ class $UserProfilesTable extends UserProfiles
 class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
   final String id;
   final String? displayName;
+
+  /// The time zone the person's reminders are written in (their "home" zone).
+  /// Reminders follow it while [travelMode] is on.
   final String? timezoneId;
+
+  /// When on, reminders stay on [timezoneId] even if the phone is elsewhere.
+  final bool travelMode;
   final String timeFormat;
   final String themeMode;
   final bool notificationsEnabled;
@@ -683,6 +716,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
     required this.id,
     this.displayName,
     this.timezoneId,
+    required this.travelMode,
     required this.timeFormat,
     required this.themeMode,
     required this.notificationsEnabled,
@@ -714,6 +748,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
     if (!nullToAbsent || timezoneId != null) {
       map['timezone_id'] = Variable<String>(timezoneId);
     }
+    map['travel_mode'] = Variable<bool>(travelMode);
     map['time_format'] = Variable<String>(timeFormat);
     map['theme_mode'] = Variable<String>(themeMode);
     map['notifications_enabled'] = Variable<bool>(notificationsEnabled);
@@ -754,6 +789,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
           timezoneId == null && nullToAbsent
               ? const Value.absent()
               : Value(timezoneId),
+      travelMode: Value(travelMode),
       timeFormat: Value(timeFormat),
       themeMode: Value(themeMode),
       notificationsEnabled: Value(notificationsEnabled),
@@ -795,6 +831,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
       id: serializer.fromJson<String>(json['id']),
       displayName: serializer.fromJson<String?>(json['displayName']),
       timezoneId: serializer.fromJson<String?>(json['timezoneId']),
+      travelMode: serializer.fromJson<bool>(json['travelMode']),
       timeFormat: serializer.fromJson<String>(json['timeFormat']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       notificationsEnabled: serializer.fromJson<bool>(
@@ -844,6 +881,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
       'id': serializer.toJson<String>(id),
       'displayName': serializer.toJson<String?>(displayName),
       'timezoneId': serializer.toJson<String?>(timezoneId),
+      'travelMode': serializer.toJson<bool>(travelMode),
       'timeFormat': serializer.toJson<String>(timeFormat),
       'themeMode': serializer.toJson<String>(themeMode),
       'notificationsEnabled': serializer.toJson<bool>(notificationsEnabled),
@@ -871,6 +909,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
     String? id,
     Value<String?> displayName = const Value.absent(),
     Value<String?> timezoneId = const Value.absent(),
+    bool? travelMode,
     String? timeFormat,
     String? themeMode,
     bool? notificationsEnabled,
@@ -895,6 +934,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
     id: id ?? this.id,
     displayName: displayName.present ? displayName.value : this.displayName,
     timezoneId: timezoneId.present ? timezoneId.value : this.timezoneId,
+    travelMode: travelMode ?? this.travelMode,
     timeFormat: timeFormat ?? this.timeFormat,
     themeMode: themeMode ?? this.themeMode,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -928,6 +968,8 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
           data.displayName.present ? data.displayName.value : this.displayName,
       timezoneId:
           data.timezoneId.present ? data.timezoneId.value : this.timezoneId,
+      travelMode:
+          data.travelMode.present ? data.travelMode.value : this.travelMode,
       timeFormat:
           data.timeFormat.present ? data.timeFormat.value : this.timeFormat,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
@@ -998,6 +1040,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
           ..write('timezoneId: $timezoneId, ')
+          ..write('travelMode: $travelMode, ')
           ..write('timeFormat: $timeFormat, ')
           ..write('themeMode: $themeMode, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
@@ -1027,6 +1070,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
     id,
     displayName,
     timezoneId,
+    travelMode,
     timeFormat,
     themeMode,
     notificationsEnabled,
@@ -1055,6 +1099,7 @@ class UserProfileRow extends DataClass implements Insertable<UserProfileRow> {
           other.id == this.id &&
           other.displayName == this.displayName &&
           other.timezoneId == this.timezoneId &&
+          other.travelMode == this.travelMode &&
           other.timeFormat == this.timeFormat &&
           other.themeMode == this.themeMode &&
           other.notificationsEnabled == this.notificationsEnabled &&
@@ -1081,6 +1126,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
   final Value<String> id;
   final Value<String?> displayName;
   final Value<String?> timezoneId;
+  final Value<bool> travelMode;
   final Value<String> timeFormat;
   final Value<String> themeMode;
   final Value<bool> notificationsEnabled;
@@ -1106,6 +1152,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     this.id = const Value.absent(),
     this.displayName = const Value.absent(),
     this.timezoneId = const Value.absent(),
+    this.travelMode = const Value.absent(),
     this.timeFormat = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.notificationsEnabled = const Value.absent(),
@@ -1132,6 +1179,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     required String id,
     this.displayName = const Value.absent(),
     this.timezoneId = const Value.absent(),
+    this.travelMode = const Value.absent(),
     required String timeFormat,
     required String themeMode,
     required bool notificationsEnabled,
@@ -1175,6 +1223,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     Expression<String>? id,
     Expression<String>? displayName,
     Expression<String>? timezoneId,
+    Expression<bool>? travelMode,
     Expression<String>? timeFormat,
     Expression<String>? themeMode,
     Expression<bool>? notificationsEnabled,
@@ -1201,6 +1250,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
       if (id != null) 'id': id,
       if (displayName != null) 'display_name': displayName,
       if (timezoneId != null) 'timezone_id': timezoneId,
+      if (travelMode != null) 'travel_mode': travelMode,
       if (timeFormat != null) 'time_format': timeFormat,
       if (themeMode != null) 'theme_mode': themeMode,
       if (notificationsEnabled != null)
@@ -1240,6 +1290,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     Value<String>? id,
     Value<String?>? displayName,
     Value<String?>? timezoneId,
+    Value<bool>? travelMode,
     Value<String>? timeFormat,
     Value<String>? themeMode,
     Value<bool>? notificationsEnabled,
@@ -1266,6 +1317,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
       timezoneId: timezoneId ?? this.timezoneId,
+      travelMode: travelMode ?? this.travelMode,
       timeFormat: timeFormat ?? this.timeFormat,
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -1305,6 +1357,9 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
     }
     if (timezoneId.present) {
       map['timezone_id'] = Variable<String>(timezoneId.value);
+    }
+    if (travelMode.present) {
+      map['travel_mode'] = Variable<bool>(travelMode.value);
     }
     if (timeFormat.present) {
       map['time_format'] = Variable<String>(timeFormat.value);
@@ -1388,6 +1443,7 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfileRow> {
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
           ..write('timezoneId: $timezoneId, ')
+          ..write('travelMode: $travelMode, ')
           ..write('timeFormat: $timeFormat, ')
           ..write('themeMode: $themeMode, ')
           ..write('notificationsEnabled: $notificationsEnabled, ')
@@ -11819,6 +11875,7 @@ typedef $$UserProfilesTableCreateCompanionBuilder =
       required String id,
       Value<String?> displayName,
       Value<String?> timezoneId,
+      Value<bool> travelMode,
       required String timeFormat,
       required String themeMode,
       required bool notificationsEnabled,
@@ -11846,6 +11903,7 @@ typedef $$UserProfilesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String?> displayName,
       Value<String?> timezoneId,
+      Value<bool> travelMode,
       Value<String> timeFormat,
       Value<String> themeMode,
       Value<bool> notificationsEnabled,
@@ -11890,6 +11948,11 @@ class $$UserProfilesTableFilterComposer
 
   ColumnFilters<String> get timezoneId => $composableBuilder(
     column: $table.timezoneId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get travelMode => $composableBuilder(
+    column: $table.travelMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12018,6 +12081,11 @@ class $$UserProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get travelMode => $composableBuilder(
+    column: $table.travelMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get timeFormat => $composableBuilder(
     column: $table.timeFormat,
     builder: (column) => ColumnOrderings(column),
@@ -12138,6 +12206,11 @@ class $$UserProfilesTableAnnotationComposer
 
   GeneratedColumn<String> get timezoneId => $composableBuilder(
     column: $table.timezoneId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get travelMode => $composableBuilder(
+    column: $table.travelMode,
     builder: (column) => column,
   );
 
@@ -12267,6 +12340,7 @@ class $$UserProfilesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String?> displayName = const Value.absent(),
                 Value<String?> timezoneId = const Value.absent(),
+                Value<bool> travelMode = const Value.absent(),
                 Value<String> timeFormat = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<bool> notificationsEnabled = const Value.absent(),
@@ -12292,6 +12366,7 @@ class $$UserProfilesTableTableManager
                 id: id,
                 displayName: displayName,
                 timezoneId: timezoneId,
+                travelMode: travelMode,
                 timeFormat: timeFormat,
                 themeMode: themeMode,
                 notificationsEnabled: notificationsEnabled,
@@ -12319,6 +12394,7 @@ class $$UserProfilesTableTableManager
                 required String id,
                 Value<String?> displayName = const Value.absent(),
                 Value<String?> timezoneId = const Value.absent(),
+                Value<bool> travelMode = const Value.absent(),
                 required String timeFormat,
                 required String themeMode,
                 required bool notificationsEnabled,
@@ -12344,6 +12420,7 @@ class $$UserProfilesTableTableManager
                 id: id,
                 displayName: displayName,
                 timezoneId: timezoneId,
+                travelMode: travelMode,
                 timeFormat: timeFormat,
                 themeMode: themeMode,
                 notificationsEnabled: notificationsEnabled,

@@ -146,6 +146,68 @@ void main() {
     expect(find.text('Skip'), findsOneWidget);
   });
 
+  testWidgets('a missed dose is never reported as "all done"',
+      (WidgetTester tester) async {
+    final Medication medication = _medication();
+    await _pumpHome(
+      tester,
+      entries: <TodayEntry>[
+        for (int i = 0; i < 7; i++)
+          TodayEntry(
+            dose: _dose(
+              id: 't$i',
+              status: DoseStatus.taken,
+              minutes: (6 + i) * 60,
+            ),
+            medication: medication,
+            isNext: false,
+          ),
+        TodayEntry(
+          dose: _dose(id: 'm', status: DoseStatus.missed, minutes: 20 * 60),
+          medication: medication,
+          isNext: false,
+        ),
+      ],
+    );
+
+    expect(find.text('All done for today'), findsNothing);
+    expect(find.text('Every dose is logged. See you tomorrow.'), findsNothing);
+    expect(find.text('1 dose missed today'), findsOneWidget);
+    // The count stays honest: 7 taken out of 8 due.
+    expect(find.text('7/8'), findsOneWidget);
+  });
+
+  testWidgets('"All done" still shows when everything was really taken',
+      (WidgetTester tester) async {
+    await _pumpHome(
+      tester,
+      entries: <TodayEntry>[
+        TodayEntry(
+          dose: _dose(status: DoseStatus.taken),
+          medication: _medication(),
+          isNext: false,
+        ),
+      ],
+    );
+    expect(find.text('All done for today'), findsOneWidget);
+  });
+
+  testWidgets('cancelled doses neither count nor trigger "all done"',
+      (WidgetTester tester) async {
+    await _pumpHome(
+      tester,
+      entries: <TodayEntry>[
+        TodayEntry(
+          dose: _dose(status: DoseStatus.cancelled),
+          medication: _medication(),
+          isNext: false,
+        ),
+      ],
+    );
+    expect(find.text('All done for today'), findsNothing);
+    expect(find.text('1 dose missed today'), findsNothing);
+  });
+
   testWidgets('shows the empty state when nothing is scheduled',
       (WidgetTester tester) async {
     await _pumpHome(tester, entries: const <TodayEntry>[]);

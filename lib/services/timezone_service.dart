@@ -19,14 +19,21 @@ abstract final class TimezoneService {
       tz_data.initializeTimeZones();
       _initialised = true;
     }
+    return refreshDevice();
+  }
+
+  /// Re-reads the phone's time zone. Call it when the app comes back to the
+  /// foreground: the phone may have crossed a time zone while it was away.
+  static Future<String> refreshDevice() async {
     try {
       final String identifier = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(identifier));
       return identifier;
     } catch (_) {
       // The platform channel is unavailable (for example in a unit test).
-      // Fall back to UTC so the app still behaves deterministically.
-      return tz.UTC.name;
+      // Keep what we had, or fall back to UTC so the app still behaves
+      // deterministically.
+      return deviceTimeZoneId;
     }
   }
 
@@ -36,17 +43,75 @@ abstract final class TimezoneService {
   /// The active timezone identifier, e.g. "Europe/Berlin".
   static String get timeZoneId => tz.local.name;
 
-  /// A converter bound to the active timezone.
-  static LocalTimeConverter get converter => TzLocalTimeConverter(tz.local);
+  /// The phone's own time zone, as reported by the platform.
+  static String get deviceTimeZoneId {
+    try {
+      return tz.local.name;
+    } catch (_) {
+      // The location has never been set (no platform, e.g. a unit test).
+      return tz.UTC.name;
+    }
+  }
+
+  /// A converter bound to the active (device) timezone.
+  static LocalTimeConverter get converter => converterFor(deviceTimeZoneId);
 
   /// A converter bound to a specific timezone.
+  ///
+  /// Before the timezone database is loaded (unit tests, a failed start) the
+  /// phone's own clock is used, so the app still agrees with the device about
+  /// what day it is.
   static LocalTimeConverter converterFor(String timeZoneId) {
+    if (tz.timeZoneDatabase.locations.isEmpty) {
+      return DeviceLocalConverter(timeZoneId);
+    }
     try {
       return TzLocalTimeConverter(tz.getLocation(timeZoneId));
     } catch (_) {
       return TzLocalTimeConverter(tz.UTC);
     }
   }
+
+  /// Every zone the picker can offer, "Region/City" names only, sorted.
+  static List<String> get allTimeZones {
+    if (!_initialised) {
+      tz_data.initializeTimeZones();
+      _initialised = true;
+    }
+    final List<String> ids = tz.timeZoneDatabase.locations.keys
+        .where((String id) =>
+            id.contains('/') &&
+            !id.startsWith('Etc/') &&
+            !id.startsWith('SystemV/') &&
+            !id.startsWith('US/'))
+        .toList()
+      ..sort();
+    return <String>['UTC', ...ids];
+  }
+
+  /// The UTC offset of [timeZoneId] at [at] (now when omitted).
+  static Duration offsetOf(String timeZoneId, {DateTime? at}) {
+    try {
+      final tz.Location loc = tz.getLocation(timeZoneId);
+      return tz.TZDateTime.from((at ?? DateTime.now()).toUtc(), loc)
+          .timeZoneOffset;
+    } catch (_) {
+      return Duration.zero;
+    }
+  }
+
+  /// "GMT-05:00" style offset text.
+  static String offsetLabel(String timeZoneId, {DateTime? at}) {
+    final int minutes = offsetOf(timeZoneId, at: at).inMinutes;
+    final String sign = minutes < 0 ? '-' : '+';
+    final int abs = minutes.abs();
+    return 'GMT$sign${(abs ~/ 60).toString().padLeft(2, '0')}:'
+        '${(abs % 60).toString().padLeft(2, '0')}';
+  }
+
+  /// "New York" from "America/New_York".
+  static String cityOf(String timeZoneId) =>
+      timeZoneId.split('/').last.replaceAll('_', ' ');
 
   /// A short, human readable list of common timezones for the picker.
   static List<String> get commonTimeZones => const <String>[
@@ -136,6 +201,28 @@ class TzLocalTimeConverter implements LocalTimeConverter {
 
   @override
   DateTime localFromUtc(DateTime utc) => tz.TZDateTime.from(utc, _location);
+}
+
+/// A converter that uses the operating system's own local time. Only a
+/// fallback for when the IANA database is not available.
+class DeviceLocalConverter implements LocalTimeConverter {
+  DeviceLocalConverter(this.timeZoneId);
+
+  @override
+  final String timeZoneId;
+
+  @override
+  DateTime utcFromLocal(DateTime local) => DateTime(
+        local.year,
+        local.month,
+        local.day,
+        local.hour,
+        local.minute,
+        local.second,
+      ).toUtc();
+
+  @override
+  DateTime localFromUtc(DateTime utc) => utc.toUtc().toLocal();
 }
 
 /// A converter that treats local time as UTC. Used by tests and as a safe

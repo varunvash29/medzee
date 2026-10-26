@@ -6,7 +6,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../domain/models/core_enums.dart';
-import '../domain/services/local_time_converter.dart';
 
 /// The state of notification permission on this device.
 class NotificationPermissionStatus {
@@ -61,9 +60,7 @@ class NotificationActionEvent {
 /// "alarms & reminders" permission, and iOS silently limits how many
 /// pending notifications an app may register.
 class NotificationService {
-  NotificationService(this._converter, {this.onAction});
-
-  final LocalTimeConverter _converter;
+  NotificationService({this.onAction});
 
   /// Invoked when the user interacts with a notification.
   final NotificationActionHandler? onAction;
@@ -251,13 +248,16 @@ class NotificationService {
     required NotificationPrivacy privacy,
     bool soundEnabled = true,
     bool vibrationEnabled = true,
+    String? personLabel,
   }) async {
     if (kIsWeb) return;
     if (!scheduledAt.toUtc().isAfter(DateTime.now().toUtc())) return;
     if (!_initialised) await initialize();
 
     final bool private = privacy == NotificationPrivacy.private;
-    final String title = private ? 'Time for your medicine' : 'Time for your medicine';
+    final String title = personLabel == null
+        ? 'Time for your medicine'
+        : "Time for $personLabel's medicine";
     final String body = private ? 'You have a dose due now' : '$medicationName — $doseLabel';
 
     final NotificationDetails details = _buildDetails(
@@ -429,18 +429,10 @@ class NotificationService {
     );
   }
 
-  tz.TZDateTime _toZoned(DateTime utc) {
-    final DateTime local = _converter.localFromUtc(utc.toUtc());
-    return tz.TZDateTime(
-      tz.local,
-      local.year,
-      local.month,
-      local.day,
-      local.hour,
-      local.minute,
-      local.second,
-    );
-  }
+  /// The instant as the operating system wants it: in the phone's own zone.
+  /// Going through the absolute instant (never a wall-clock reading) keeps the
+  /// alarm right even if the phone has moved to another zone since start-up.
+  tz.TZDateTime _toZoned(DateTime utc) => tz.TZDateTime.from(utc.toUtc(), tz.local);
 
   /// Builds a stable notification id from a string key.
   ///

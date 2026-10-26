@@ -1,15 +1,19 @@
 import 'dart:convert';
 
 import '../models/core_enums.dart';
+import '../models/inventory.dart';
 import '../models/medication.dart';
 import '../models/schedule_proposal.dart';
 
 /// A medicine as the assistant sees it: identity plus its current schedule.
 class MedicationContext {
-  const MedicationContext(this.medication, this.phases);
+  const MedicationContext(this.medication, this.phases, {this.inventory});
 
   final Medication medication;
   final List<SchedulePhase> phases;
+
+  /// Stock on hand, when the medicine has stock tracking.
+  final Inventory? inventory;
 
   /// Every reminder time currently set, sorted.
   List<int> get times {
@@ -28,6 +32,7 @@ class ProposalCheck {
     this.clarification,
     this.lines = const <String>[],
     this.medicationName,
+    this.answer,
   });
 
   /// Reasons the change cannot be made.
@@ -40,7 +45,11 @@ class ProposalCheck {
   final List<String> lines;
   final String? medicationName;
 
-  bool get canApply => errors.isEmpty && clarification == null;
+  /// A plain reply to a question; there is nothing to apply.
+  final String? answer;
+
+  bool get canApply =>
+      errors.isEmpty && clarification == null && answer == null;
 }
 
 /// Parses the assistant's JSON and validates it with plain code.
@@ -85,6 +94,7 @@ class ScheduleProposalService {
       stockQuantity: _num(decoded['stockQuantity']),
       stockMode: StockMode.fromName(_str(decoded['stockMode'])),
       clarification: _str(decoded['clarification']),
+      answer: _str(decoded['answer']),
       summary: _str(decoded['summary']),
     );
   }
@@ -96,6 +106,14 @@ class ScheduleProposalService {
     List<MedicationContext> meds, {
     required DateTime today,
   }) {
+    if (p.intent == ScheduleIntent.answer) {
+      final String? reply = p.answer;
+      return ProposalCheck(
+        answer: (reply == null || reply.isEmpty)
+            ? 'I''m not sure about that. Could you ask it another way?'
+            : reply,
+      );
+    }
     if (p.intent == ScheduleIntent.clarify) {
       return ProposalCheck(
         clarification: p.clarification ?? 'Could you tell me a bit more?',
@@ -265,6 +283,7 @@ class ScheduleProposalService {
           ],
         );
 
+      case ScheduleIntent.answer:
       case ScheduleIntent.clarify:
       case ScheduleIntent.unsupported:
         return const ProposalCheck();

@@ -30,6 +30,7 @@ abstract class ScheduleAssistant {
     required List<MedicationContext> medications,
     required List<ChatTurn> history,
     required DateTime now,
+    String briefing = '',
   });
 }
 
@@ -43,9 +44,20 @@ class GeminiScheduleAssistant implements ScheduleAssistant {
   bool get isAvailable => available;
 
   static const String _instructions = '''
-You turn a person's request about their medicine reminders into one structured
-action for the Medzee app. You only propose; the app validates and the person
-confirms.
+You help a person with their medicine reminders in the Medzee app. Each message
+becomes one structured reply. For changes you only propose; the app validates
+and the person confirms.
+
+You are given a briefing of the person's own medicines, schedules, stock and
+recent doses. When they ask a question about them ("what do I take tonight?",
+"did I miss anything?", "how many tablets are left?", "when is my next dose?"),
+use intent "answer" and put a short, friendly reply in "answer", using only the
+briefing. Times in the briefing are in the person's reminder time zone. If the
+briefing does not contain the answer, say so plainly. Never guess or invent.
+For medical questions (side effects, interactions, whether to take or stop a
+medicine) use "answer" to say you cannot give medical advice and that a doctor
+or pharmacist can; you may repeat what is written in the briefing's
+instructions.
 
 Rules:
 - Choose medicationId only from the list you are given. If you cannot tell
@@ -76,6 +88,7 @@ Rules:
               'pause',
               'resume',
               'updateStock',
+              'answer',
               'clarify',
               'unsupported',
             ],
@@ -96,6 +109,7 @@ Rules:
             nullable: true,
           ),
           'clarification': Schema.string(nullable: true),
+          'answer': Schema.string(nullable: true),
           'summary': Schema.string(nullable: true),
         },
         optionalProperties: <String>[
@@ -109,6 +123,7 @@ Rules:
           'stockQuantity',
           'stockMode',
           'clarification',
+          'answer',
           'summary',
         ],
       );
@@ -122,6 +137,7 @@ Rules:
     required List<MedicationContext> medications,
     required List<ChatTurn> history,
     required DateTime now,
+    String briefing = '',
   }) async {
     if (!available) {
       throw const AssistantException(
@@ -136,15 +152,18 @@ Rules:
     ];
 
     final StringBuffer context = StringBuffer()
-      ..writeln('Today is ${weekdays[now.weekday - 1]} $today '
-          '(timezone ${now.timeZoneName}).')
-      ..writeln('The person\'s medicines:');
-    for (final MedicationContext m in medications) {
-      context.writeln(
-        '- id=${m.medication.id} name="${m.medication.name}" '
-        'status=${m.medication.status.name} '
-        'reminders=[${m.times.map(_hhmm).join(', ')}]',
-      );
+      ..writeln('Today is ${weekdays[now.weekday - 1]} $today.');
+    if (briefing.isNotEmpty) {
+      context.write(briefing);
+    } else {
+      context.writeln('The person\'s medicines:');
+      for (final MedicationContext m in medications) {
+        context.writeln(
+          '- id=${m.medication.id} name="${m.medication.name}" '
+          'status=${m.medication.status.name} '
+          'reminders=[${m.times.map(_hhmm).join(', ')}]',
+        );
+      }
     }
     if (history.isNotEmpty) {
       context.writeln('Conversation so far:');

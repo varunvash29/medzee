@@ -32,7 +32,13 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  /// Opens (or creates) the database called [name]. Each person on a shared
+  /// device has their own, so their data never mixes.
+  AppDatabase({String name = defaultName}) : super(_openConnection(name));
+
+  /// The database used by the first person, and by every install made before
+  /// several people were supported.
+  static const String defaultName = 'medzee';
 
   /// Used by tests to run against an in-memory database.
   AppDatabase.forTesting(super.executor);
@@ -52,6 +58,7 @@ class AppDatabase extends _$AppDatabase {
             await switch (step + 1) {
               2 => _migrateToV2(m),
               3 => _migrateToV3(m),
+              4 => _migrateToV4(m),
               _ => m.createAll(),
             };
           }
@@ -88,6 +95,11 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// v4: travel mode (reminders stay on the home time zone).
+  Future<void> _migrateToV4(Migrator m) async {
+    await m.addColumn(userProfiles, userProfiles.travelMode);
+  }
+
   /// v3: the "prescribed as" tag on medicines.
   Future<void> _migrateToV3(Migrator m) async {
     await m.addColumn(medications, medications.prescribedAs);
@@ -99,9 +111,9 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-QueryExecutor _openConnection() {
+QueryExecutor _openConnection(String name) {
   return driftDatabase(
-    name: 'medzee',
+    name: name,
     native: DriftNativeOptions(
       databaseDirectory: getApplicationSupportDirectory,
     ),

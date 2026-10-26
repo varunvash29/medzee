@@ -6,6 +6,7 @@ class UserProfile {
     required this.id,
     this.displayName,
     this.timezoneId,
+    this.travelMode = false,
     this.timeFormat = TimeFormat.h12,
     this.themeMode = AppThemeMode.system,
     this.notificationsEnabled = true,
@@ -33,8 +34,13 @@ class UserProfile {
   /// Optional preferred name used in the home greeting.
   final String? displayName;
 
-  /// IANA timezone id, e.g. "Europe/Berlin".
+  /// The IANA time zone the reminders are written in (their "home" zone),
+  /// e.g. "America/New_York". Null until first set.
   final String? timezoneId;
+
+  /// When on, reminders stay on [timezoneId] even if the phone is in another
+  /// time zone. When off they follow the phone.
+  final bool travelMode;
   final TimeFormat timeFormat;
   final AppThemeMode themeMode;
   final bool notificationsEnabled;
@@ -76,6 +82,7 @@ class UserProfile {
     bool clearDisplayName = false,
     String? timezoneId,
     bool clearTimezoneId = false,
+    bool? travelMode,
     TimeFormat? timeFormat,
     AppThemeMode? themeMode,
     bool? notificationsEnabled,
@@ -102,6 +109,7 @@ class UserProfile {
       id: id ?? this.id,
       displayName: clearDisplayName ? null : (displayName ?? this.displayName),
       timezoneId: clearTimezoneId ? null : (timezoneId ?? this.timezoneId),
+      travelMode: travelMode ?? this.travelMode,
       timeFormat: timeFormat ?? this.timeFormat,
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,

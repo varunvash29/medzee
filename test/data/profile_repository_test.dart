@@ -59,4 +59,41 @@ void main() {
     expect(rows.single.id, 'first');
     expect((await repository.getProfile())!.displayName, 'Updated');
   });
+
+  test('travel mode and the home time zone survive a save and reload',
+      () async {
+    await repository.saveProfile(
+      const UserProfile(
+        id: 'p',
+        timezoneId: 'America/New_York',
+        travelMode: true,
+        onboardingCompleted: true,
+      ),
+    );
+
+    final UserProfile? loaded = await repository.getProfile();
+    expect(loaded!.travelMode, isTrue);
+    expect(loaded.timezoneId, 'America/New_York');
+
+    await repository.saveProfile(loaded.copyWith(travelMode: false));
+    expect((await repository.getProfile())!.travelMode, isFalse);
+    expect((await repository.getProfile())!.timezoneId, 'America/New_York');
+  });
+
+  test('a profile saved before travel mode existed reads as "off"', () async {
+    // Raw insert without the new column: it takes the schema default.
+    await db.customStatement(
+      'INSERT INTO user_profiles (id, time_format, theme_mode, '
+      'notifications_enabled, default_reminder_enabled, '
+      'missed_follow_up_enabled, missed_follow_up_minutes, '
+      'quiet_hours_enabled, quiet_hours_start_minutes, '
+      'quiet_hours_end_minutes, daily_summary_enabled, '
+      'daily_summary_minutes, notification_privacy, onboarding_completed, '
+      "demo_mode, app_lock_enabled, text_scale, appearance) VALUES ('old', "
+      "'h12', 'system', 1, 1, 0, 60, 0, 1320, 420, 0, 1200, 'detailed', 1, "
+      "0, 0, 1.0, 'tint')",
+    );
+    final UserProfile? loaded = await repository.getProfile();
+    expect(loaded!.travelMode, isFalse);
+  });
 }

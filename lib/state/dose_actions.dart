@@ -51,6 +51,10 @@ class DoseActions {
             service.markMissed(d, m),
       );
 
+  /// Drops cancelled doses from the calendar listing. Returns how many.
+  Future<int> removeCancelled(Iterable<ScheduledDose> doses) =>
+      _doseService.removeCancelled(doses);
+
   Future<DoseLogResult?> undo(ScheduledDose dose) =>
       _run(dose, (DoseService service, ScheduledDose d, Medication m) => service.undo(d, m));
 }

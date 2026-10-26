@@ -1,13 +1,18 @@
 import 'package:drift/drift.dart';
 
 /// Schema version. Bump this whenever [AppDatabase.migration] changes.
-const int kDatabaseSchemaVersion = 3;
+const int kDatabaseSchemaVersion = 4;
 
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
   TextColumn get id => text()();
   TextColumn get displayName => text().nullable()();
+  /// The time zone the person's reminders are written in (their "home" zone).
+  /// Reminders follow it while [travelMode] is on.
   TextColumn get timezoneId => text().nullable()();
+
+  /// When on, reminders stay on [timezoneId] even if the phone is elsewhere.
+  BoolColumn get travelMode => boolean().withDefault(const Constant(false))();
   TextColumn get timeFormat => text()();
   TextColumn get themeMode => text()();
   BoolColumn get notificationsEnabled => boolean()();

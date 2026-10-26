@@ -44,6 +44,7 @@ ProposalCheck _check(Map<String, Object?> json, [List<MedicationContext>? m]) =>
         today: _today);
 
 void main() {
+  answerTests();
   group('parse', () {
     test('rejects junk and unknown intents', () {
       expect(() => ScheduleProposalService.parse('nope', id: 'x'),
@@ -213,6 +214,35 @@ void main() {
       final ProposalCheck c = _check(<String, Object?>{'intent': 'unsupported'});
       expect(c.canApply, isFalse);
       expect(c.errors.single, contains('medicine screen'));
+    });
+  });
+}
+
+void answerTests() {
+  group('answer', () {
+    test('a question gets its reply and nothing to apply', () {
+      final ProposalCheck c = _check(<String, Object?>{
+        'intent': 'answer',
+        'answer': 'You take Metformin at 8 AM and 8 PM.',
+      });
+      expect(c.answer, 'You take Metformin at 8 AM and 8 PM.');
+      expect(c.canApply, isFalse);
+      expect(c.errors, isEmpty);
+      expect(c.lines, isEmpty);
+    });
+
+    test('an empty reply falls back to a polite prompt', () {
+      final ProposalCheck c = _check(<String, Object?>{'intent': 'answer'});
+      expect(c.answer, isNotEmpty);
+      expect(c.canApply, isFalse);
+    });
+
+    test('works without any medicine on file', () {
+      final ProposalCheck c = _check(
+        <String, Object?>{'intent': 'answer', 'answer': 'Nothing yet.'},
+        <MedicationContext>[],
+      );
+      expect(c.answer, 'Nothing yet.');
     });
   });
 }

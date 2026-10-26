@@ -25,7 +25,9 @@ import '../services/medicine_info_service.dart';
 import '../services/notification_service.dart';
 import '../services/notification_action_dispatcher.dart';
 import '../services/schedule_service.dart';
+import '../services/people/people_controller.dart';
 import '../services/timezone_service.dart';
+import 'timezone_providers.dart';
 
 /// Dependency injection root.
 ///
@@ -44,6 +46,18 @@ final Provider<NotificationActionDispatcher> notificationActionDispatcherProvide
     Provider<NotificationActionDispatcher>(
   (Ref ref) => NotificationActionDispatcher(),
 );
+
+/// Who shares this device. The host overrides it; on its own it is one person.
+final Provider<PeopleController> peopleControllerProvider =
+    Provider<PeopleController>((Ref ref) => PeopleController.solo());
+
+/// Which person this provider graph belongs to (see [AppSession]).
+final Provider<String> sessionPersonIdProvider =
+    Provider<String>((Ref ref) => Person.primaryId);
+
+/// Keeps each person's sync code apart in secure storage (see [Person]).
+final Provider<String> syncStorageSuffixProvider =
+    Provider<String>((Ref ref) => '');
 
 // ------------------------------------------------------------- repositories
 
@@ -90,6 +104,12 @@ class TimezoneFacade {
   /// Current timezone identifier, e.g. "Europe/Berlin".
   String get timeZoneId => TimezoneService.timeZoneId;
 
+  /// The phone's own time zone.
+  String get deviceZoneId => TimezoneService.deviceTimeZoneId;
+
+  /// Re-reads the phone's time zone (it may have changed while away).
+  Future<String> refreshDeviceZone() => TimezoneService.refreshDevice();
+
   /// A converter bound to a specific timezone.
   LocalTimeConverter converterFor(String timeZoneId) =>
       TimezoneService.converterFor(timeZoneId);
@@ -103,7 +123,6 @@ final Provider<TimezoneFacade> timezoneServiceProvider =
 final Provider<NotificationService> notificationServiceProvider =
     Provider<NotificationService>(
   (Ref ref) => NotificationService(
-    ref.watch(timezoneServiceProvider).converter,
     onAction: ref.watch(notificationActionDispatcherProvider).handler,
   ),
 );
@@ -116,6 +135,9 @@ final Provider<ScheduleService> scheduleServiceProvider =
     notificationScheduleRepository:
         ref.watch(notificationScheduleRepositoryProvider),
     notificationService: ref.watch(notificationServiceProvider),
+    // Read at call time so a change of reminder time zone applies at once.
+    reminderConverter: () => ref.read(reminderConverterProvider),
+    personLabel: () => ref.read(peopleControllerProvider).labelForReminders,
   ),
 );
 
@@ -176,6 +198,7 @@ final ChangeNotifierProvider<CloudSyncController> cloudSyncControllerProvider =
     ref.watch(firebaseGatewayProvider),
     ref.watch(firebaseAuthServiceProvider),
     onRemoteApplied: () => ref.read(scheduleServiceProvider).reconcileAll(),
+    storageSuffix: ref.watch(syncStorageSuffixProvider),
   ),
 );
 

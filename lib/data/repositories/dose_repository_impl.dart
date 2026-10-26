@@ -116,6 +116,45 @@ class DoseRepositoryImpl implements DoseRepository {
   }
 
   @override
+  Future<int> deleteDoses(Iterable<String> doseIds) async {
+    final List<String> ids = doseIds.toList(growable: false);
+    if (ids.isEmpty) return 0;
+    return (_db.delete(_db.scheduledDoses)
+          ..where(($ScheduledDosesTable t) => t.id.isIn(ids)))
+        .go();
+  }
+
+  @override
+  Future<bool> hasPastActivity(String medicationId, DateTime now) async {
+    final DateTime threshold = now.toUtc();
+    final ScheduledDoseRow? past = await (_db.select(_db.scheduledDoses)
+          ..where(($ScheduledDosesTable t) =>
+              t.medicationId.equals(medicationId) &
+              t.status.equals(DoseStatus.cancelled.name).not() &
+              t.scheduledAt.isSmallerOrEqualValue(threshold))
+          ..limit(1))
+        .getSingleOrNull();
+    if (past != null) return true;
+    final DoseLogRow? log = await (_db.select(_db.doseLogs)
+          ..where(($DoseLogsTable t) => t.medicationId.equals(medicationId))
+          ..limit(1))
+        .getSingleOrNull();
+    return log != null;
+  }
+
+  @override
+  Future<int> deleteOpenFutureDoses(String medicationId, DateTime from) {
+    final DateTime threshold = from.toUtc();
+    return (_db.delete(_db.scheduledDoses)
+          ..where(($ScheduledDosesTable t) =>
+              t.medicationId.equals(medicationId) &
+              (t.status.equals(DoseStatus.cancelled.name) |
+                  (t.status.equals(DoseStatus.pending.name) &
+                      t.scheduledAt.isBiggerThanValue(threshold)))))
+        .go();
+  }
+
+  @override
   Future<int> cancelFutureDoses(String medicationId, DateTime from) async {
     final DateTime threshold = from.toUtc();
     return (_db.update(_db.scheduledDoses)

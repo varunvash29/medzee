@@ -28,6 +28,8 @@ Legend: ✅ fully implemented & tested · 🧪 implemented, needs device verific
 | Notification privacy levels | ✅ | Hide medicine names on lock screen |
 | Actionable notifications (take/skip) | 🧪 | Wired via action dispatcher; verify on device |
 | Boot / timezone-change rescheduling | 🧪 | Receivers declared; verify on device |
+| Travel mode (reminders stay on your home time zone) | ✅ | Per person. Toggle in Profile → Time zone, or from the Home banner when the phone changes zone. Home shows both clocks and each dose shows "your time" |
+| Choose any IANA time zone for your schedule | ✅ | Searchable picker; changing it rebuilds reminders at once |
 | Push notifications (FCM) | 🔌 | Firebase wired behind feature detection; activates when `google-services.json` is added (see docs/FIREBASE.md) |
 
 ## Inventory
@@ -55,7 +57,7 @@ Legend: ✅ fully implemented & tested · 🧪 implemented, needs device verific
 | 100% offline, no accounts | ✅ | No telemetry, no analytics SDKs |
 | Biometric app lock | 🧪 | `local_auth`; verify on device |
 | Secure storage for secrets | ✅ | `flutter_secure_storage` |
-| Cloud sync / multi-device | ❌ | Out of scope for v1 |
+| Cloud sync / multi-device | 🔌 | Optional, off until switched on; a per-person sync code links a phone and the web |
 
 ## Input helpers
 
@@ -63,7 +65,9 @@ Legend: ✅ fully implemented & tested · 🧪 implemented, needs device verific
 | --- | --- | --- |
 | Barcode scan to fill medicine name | 🧪 | `mobile_scanner`; manual fallback always offered |
 | Medicine photo | 🧪 | `image_picker` |
-| Multi-user profiles | ❌ | Schema-ready, UI single-profile |
+| Several people on one device | ✅ | Each person has their own database, reminders and sync code; switch from Home or Profile |
+| Assistant answers questions about your medicines | 🔌 | "What do I take tonight?", "how many tablets are left?" — answered from your own schedule, stock and recent doses; never medical advice |
+| Remove cancelled doses from the calendar | ✅ | Cancelled doses are not counted; remove one or a whole day |
 
 ---
 

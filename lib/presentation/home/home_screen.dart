@@ -17,9 +17,12 @@ import '../../state/doses_provider.dart';
 import '../../state/inventory_providers.dart';
 import '../../state/medications_provider.dart';
 import '../../state/profile_providers.dart';
+import '../../state/timezone_providers.dart';
+import '../profile/people_card.dart';
 import '../shared/app_widgets.dart';
 import '../shared/medzee_logo.dart';
 import '../shared/motion_widgets.dart';
+import '../shared/travel_widgets.dart';
 
 /// Home: what to take next, how today is going, and the main shortcuts.
 class HomeScreen extends ConsumerWidget {
@@ -79,9 +82,17 @@ class HomeScreen extends ConsumerWidget {
         .cast<TodayEntry?>()
         .firstWhere((_) => true, orElse: () => null);
 
+    // Cancelled doses (a paused or stopped medicine) are not part of the day.
+    final int missed = entries
+        .where((TodayEntry e) => e.dose.status == DoseStatus.missed)
+        .length;
+    final bool hasLiveDoses = entries
+        .any((TodayEntry e) => e.dose.status != DoseStatus.cancelled);
+
     return <Widget>[
-      if (entries.isNotEmpty) ...<Widget>[
-        _NextDoseCard(next: next),
+      const TravelBanner(),
+      if (hasLiveDoses) ...<Widget>[
+        _NextDoseCard(next: next, missed: missed),
         const SizedBox(height: AppSpacing.lg),
       ],
       const _RefillBanner(),
@@ -101,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
 
 // ------------------------------------------------------------------ header
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   const _Header({required this.profile});
 
   final UserProfile profile;
@@ -114,7 +125,7 @@ class _Header extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final String? name = profile.displayName?.trim();
     const List<String> months = <String>[
@@ -125,7 +136,9 @@ class _Header extends StatelessWidget {
       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
       'Sunday',
     ];
-    final DateTime now = DateTime.now();
+    // The date the person's doses are filed under, which in travel mode is the
+    // reminder zone's, not the phone's.
+    final DateTime now = ref.watch(reminderClockProvider).now();
 
     return Row(
       children: <Widget>[
@@ -150,6 +163,7 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        const PersonChip(),
         MedzeeMark.tile(size: 44),
       ],
     );
@@ -159,15 +173,50 @@ class _Header extends StatelessWidget {
 // --------------------------------------------------------------- next dose
 
 class _NextDoseCard extends ConsumerWidget {
-  const _NextDoseCard({required this.next});
+  const _NextDoseCard({required this.next, this.missed = 0});
 
   final TodayEntry? next;
+
+  /// Doses today whose time and grace period have passed without a log.
+  final int missed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final AppStatusColors status = context.statusColors;
     final TodayEntry? e = next;
+
+    // Nothing left to take, but some doses were missed: that is not "all done".
+    if (e == null && missed > 0) {
+      return AppCard(
+        color: status.warningContainer,
+        borderColor: Colors.transparent,
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.error_outline_rounded, color: status.warning, size: 32),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    missed == 1
+                        ? '1 dose missed today'
+                        : '$missed doses missed today',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  Text(
+                    'Nothing else is due. If you did take it, tap it below '
+                    'to log it.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (e == null) {
       return AppCard(
@@ -235,6 +284,7 @@ class _NextDoseCard extends ConsumerWidget {
                       '${_doseLabel(e.dose, m)} · ${_time(context, e.dose)}',
                       style: theme.textTheme.bodyMedium,
                     ),
+                    DeviceTimeNote(scheduledAt: e.dose.scheduledAt),
                     if (m.prescribedAs != null) ...<Widget>[
                       const SizedBox(height: 4),
                       PrescribedAsTag(m.prescribedAs!),
@@ -327,7 +377,10 @@ class _ProgressCard extends StatelessWidget {
           break;
       }
     }
-    final int total = entries.length;
+    // Cancelled doses (paused or stopped medicines) are not part of the day.
+    final int total = entries
+        .where((TodayEntry e) => e.dose.status != DoseStatus.cancelled)
+        .length;
 
     Widget legend(String label, int n, Color color) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
@@ -705,8 +758,7 @@ class _ScheduleSections extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
-    final DateTime now = DateTime.now();
-    final int nowMinutes = now.hour * 60 + now.minute;
+    final int nowMinutes = ref.watch(reminderClockProvider).minutesOfDay;
 
     final GroupedSchedule<TodayEntry> g = groupSchedule<TodayEntry>(
       entries,
@@ -791,6 +843,8 @@ class _TimeGroupCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(time, style: theme.textTheme.titleSmall),
+                const SizedBox(width: AppSpacing.sm),
+                DeviceTimeNote(scheduledAt: group.items.first.dose.scheduledAt),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   '${group.items.length} ${group.items.length == 1 ? 'medicine' : 'medicines'}',

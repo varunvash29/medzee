@@ -28,6 +28,19 @@ abstract interface class DoseRepository {
   /// Changes the status of a scheduled dose.
   Future<void> setStatus(String doseId, DoseStatus status);
 
+  /// Removes dose rows outright. Used for cancelled doses the user no longer
+  /// wants listed, and for pending doses that are rebuilt after the reminder
+  /// time zone changes. Logs are untouched.
+  Future<int> deleteDoses(Iterable<String> doseIds);
+
+  /// Whether the medication has any past doses or dose logs: anything that
+  /// belongs in the person's history and must survive deleting the medicine.
+  Future<bool> hasPastActivity(String medicationId, DateTime now);
+
+  /// Removes what is still ahead for a medication: every cancelled dose and
+  /// every pending dose after [from]. Taken, skipped and past doses stay.
+  Future<int> deleteOpenFutureDoses(String medicationId, DateTime from);
+
   /// Marks every future pending dose of a medication as cancelled.
   Future<int> cancelFutureDoses(String medicationId, DateTime from);
 

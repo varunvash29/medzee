@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'cloud_sync_card.dart';
+import 'people_card.dart';
+import 'time_zone_card.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_spacing.dart';
+import '../../data/local/wipe.dart';
 import '../../core/theme/app_status_colors.dart';
 import '../../domain/models/core_enums.dart';
 import '../../domain/models/user_profile.dart';
@@ -34,6 +37,8 @@ class ProfileScreen extends ConsumerWidget {
             Text('You', style: theme.textTheme.headlineMedium),
             const SizedBox(height: AppSpacing.lg),
             _ProfileCard(profile: profile),
+            const SectionHeader(title: 'People on this device'),
+            const PeopleCard(),
             const SectionHeader(title: 'Appearance'),
             AppCard(
               padding: EdgeInsets.zero,
@@ -111,6 +116,8 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SectionHeader(title: 'Time zone'),
+            const TimeZoneCard(),
             const SectionHeader(title: 'Cloud sync'),
             const CloudSyncCard(),
             const SectionHeader(title: 'Privacy & data'),
@@ -369,15 +376,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
     if (ok != true || !context.mounted) return;
-    final dynamic db = ref.read(appDatabaseProvider);
-    await db.delete(db.userProfiles).go();
-    await db.delete(db.medications).go();
-    await db.delete(db.doseLogs).go();
-    await db.delete(db.scheduledDoses).go();
-    await db.delete(db.schedulePhases).go();
-    await db.delete(db.inventories).go();
-    await db.delete(db.inventoryTransactions).go();
-    await db.delete(db.notificationSchedules).go();
+    await wipeAllData(ref.read(appDatabaseProvider));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('All data deleted.')),
@@ -416,7 +415,7 @@ class _ProfileCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  name.isEmpty ? 'Local user' : name,
+                  name.isEmpty ? 'You' : name,
                   style: theme.textTheme.titleLarge,
                 ),
                 const SizedBox(height: AppSpacing.xxs),

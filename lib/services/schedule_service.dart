@@ -7,6 +7,7 @@ import '../domain/models/scheduled_notification.dart';
 import '../domain/repositories/dose_repository.dart';
 import '../domain/repositories/medication_repository.dart';
 import '../domain/repositories/notification_schedule_repository.dart';
+import '../domain/services/local_time_converter.dart';
 import '../domain/services/schedule_generator.dart';
 import 'notification_service.dart';
 
@@ -21,20 +22,49 @@ class ScheduleService {
     required DoseRepository doseRepository,
     required NotificationScheduleRepository notificationScheduleRepository,
     required NotificationService notificationService,
+    LocalTimeConverter Function()? reminderConverter,
+    String? Function()? personLabel,
   })  : _medications = medicationRepository,
         _doses = doseRepository,
         _notificationSchedules = notificationScheduleRepository,
-        _notifications = notificationService;
+        _notifications = notificationService,
+        _reminderConverter = reminderConverter,
+        _personLabel = personLabel;
 
   final MedicationRepository _medications;
   final DoseRepository _doses;
   final NotificationScheduleRepository _notificationSchedules;
   final NotificationService _notifications;
 
+  /// The time zone this person's reminders run on. When null the phone's own
+  /// clock is used.
+  final LocalTimeConverter Function()? _reminderConverter;
+
+  /// Who the reminders are for, when several people share the phone.
+  final String? Function()? _personLabel;
+
   static const Uuid _uuid = Uuid();
 
   /// The number of days ahead that dose instances and reminders are built.
   static const int horizonDays = NotificationService.reminderHorizonDays;
+
+  /// The first calendar day to plan, in the reminder zone.
+  DateTime _planStart(DateTime reference) {
+    final LocalTimeConverter? converter = _reminderConverter?.call();
+    final DateTime zoned =
+        converter == null ? reference : converter.localFromUtc(reference.toUtc());
+    return DateTime(zoned.year, zoned.month, zoned.day);
+  }
+
+  /// The absolute instant a dose on [localDate] at [minutes] falls on.
+  DateTime _instantFor(DateTime localDate, int minutes) {
+    final LocalTimeConverter? converter = _reminderConverter?.call();
+    if (converter == null) return localDate.add(Duration(minutes: minutes));
+    return converter
+        .utcFromLocal(DateTime(localDate.year, localDate.month, localDate.day)
+            .add(Duration(minutes: minutes)))
+        .toUtc();
+  }
 
   /// Rebuilds the dose instances and reminders for a single medication.
   ///
@@ -46,21 +76,27 @@ class ScheduleService {
     DateTime? now,
   }) async {
     final DateTime reference = now ?? DateTime.now();
-    final DateTime from = DateTime(
-      reference.year,
-      reference.month,
-      reference.day,
-    );
+    final DateTime from = _planStart(reference);
     final DateTime to = from.add(Duration(days: horizonDays));
 
     final List<SchedulePhase> usable = _usablePhases(medication, phases);
 
     // 1. Cancel future pending doses that are no longer part of the plan.
-    final List<ScheduledDose> existing = await _doses.getDosesInRange(
-      from,
-      to,
-    );
+    final List<ScheduledDose> existing =
+        (await _doses.getDosesInRange(from, to)).toList();
     final Set<String> keep = _occurrenceKeys(usable, from, to);
+
+    // When the reminder time zone moves west, "today" starts earlier than the
+    // days already planned. Past slots on those earlier days were never due
+    // for this person, so they are not created (they would show as missed).
+    // Taken before any dose is rebuilt below.
+    DateTime? earliestPlanned;
+    for (final ScheduledDose d in existing) {
+      if (d.medicationId != medication.id) continue;
+      if (earliestPlanned == null || d.localDate.isBefore(earliestPlanned)) {
+        earliestPlanned = d.localDate;
+      }
+    }
     final List<ScheduledDose> stale = existing
         .where((ScheduledDose dose) =>
             dose.medicationId == medication.id &&
@@ -75,14 +111,33 @@ class ScheduleService {
     // earlier (by a pause, or by an older build that mis-compared dates).
     // They cannot simply be re-inserted: a medicine can only have one dose
     // at a given instant, so the cancelled row would block the new one.
+    //
+    // A dose whose instant no longer matches its wall-clock time (the reminder
+    // time zone changed, or the phone crossed a DST change) is dropped here and
+    // rebuilt below at the right instant. Only doses nobody has acted on are
+    // dropped; the one-dose-per-instant rule means they cannot be edited in
+    // place without briefly colliding with each other.
     final DateTime nowUtc = reference.toUtc();
+    final List<ScheduledDose> restamp = <ScheduledDose>[];
     for (final ScheduledDose dose in existing) {
-      if (dose.medicationId == medication.id &&
-          dose.status == DoseStatus.cancelled &&
-          dose.scheduledAt.toUtc().isAfter(nowUtc) &&
-          keep.contains(_doseKey(dose))) {
+      if (dose.medicationId != medication.id) continue;
+      if (!keep.contains(_doseKey(dose))) continue;
+      final bool open = dose.status == DoseStatus.pending ||
+          (dose.status == DoseStatus.cancelled &&
+              dose.scheduledAt.toUtc().isAfter(nowUtc));
+      if (!open) continue;
+      final DateTime expected =
+          _instantFor(dose.localDate, dose.scheduledMinutes).toUtc();
+      if (!dose.scheduledAt.toUtc().isAtSameMomentAs(expected)) {
+        restamp.add(dose);
+      } else if (dose.status == DoseStatus.cancelled) {
         await _doses.setStatus(dose.id, DoseStatus.pending);
       }
+    }
+    if (restamp.isNotEmpty) {
+      await _doses.deleteDoses(<String>[for (final ScheduledDose d in restamp) d.id]);
+      final Set<String> gone = <String>{for (final ScheduledDose d in restamp) d.id};
+      existing.removeWhere((ScheduledDose d) => gone.contains(d.id));
     }
 
     // 2. Insert the doses that should exist but do not yet.
@@ -96,14 +151,19 @@ class ScheduleService {
       final String key = '${occurrence.phaseId}|${_dayKey(occurrence.localDate)}'
           '|${occurrence.minutes}';
       if (have.contains(key)) continue;
+      final DateTime instant =
+          _instantFor(occurrence.localDate, occurrence.minutes);
+      if (earliestPlanned != null &&
+          occurrence.localDate.isBefore(earliestPlanned) &&
+          !instant.toUtc().isAfter(nowUtc)) {
+        continue;
+      }
       toInsert.add(
         ScheduledDose(
           id: _uuid.v4(),
           medicationId: medication.id,
           phaseId: occurrence.phaseId,
-          scheduledAt: occurrence.localDate.add(
-            Duration(minutes: occurrence.minutes),
-          ),
+          scheduledAt: instant,
           localDate: occurrence.localDate,
           scheduledMinutes: occurrence.minutes,
           doseQuantity: occurrence.doseQuantity,
@@ -135,12 +195,9 @@ class ScheduleService {
     if (medication.status != MedicationStatus.active) return;
 
     final DateTime reference = now ?? DateTime.now();
-    final DateTime from = DateTime(
-      reference.year,
-      reference.month,
-      reference.day,
-    );
+    final DateTime from = _planStart(reference);
     final DateTime to = from.add(Duration(days: horizonDays));
+    final String? person = _personLabel?.call();
 
     final List<ScheduledNotification> created = <ScheduledNotification>[];
     final List<ScheduledDose> doses =
@@ -176,6 +233,7 @@ class ScheduleService {
         doseLabel: doseLabel,
         payload: 'medicine:${medication.id}',
         privacy: NotificationPrivacy.detailed,
+        personLabel: person,
       );
     }
 

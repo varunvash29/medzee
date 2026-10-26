@@ -651,8 +651,9 @@ class _LifecycleActions extends ConsumerWidget {
           context,
           title: 'Delete ${medication.name}?',
           body:
-              'The medicine, its schedule and its reminders are removed. '
-              'Past dose history is kept so your records stay complete.',
+              'Its reminders, stock and upcoming doses are removed. Doses you '
+              'already took, skipped or missed stay in your calendar and '
+              'insights, so your records stay complete.',
           confirmLabel: 'Delete',
           onConfirm: () =>
               ref.read(medicationServiceProvider).delete(medication),

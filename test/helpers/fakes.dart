@@ -52,6 +52,17 @@ class FakeDoseRepository implements DoseRepository {
   Future<void> insertDoses(List<ScheduledDose> doses) async {}
 
   @override
+  Future<bool> hasPastActivity(String medicationId, DateTime now) async =>
+      logs.isNotEmpty;
+
+  @override
+  Future<int> deleteOpenFutureDoses(String medicationId, DateTime from) async =>
+      0;
+
+  @override
+  Future<int> deleteDoses(Iterable<String> doseIds) async => doseIds.length;
+
+  @override
   Future<int> cancelFutureDoses(String medicationId, DateTime from) async => 0;
 
   @override

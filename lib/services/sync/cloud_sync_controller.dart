@@ -21,11 +21,17 @@ class CloudSyncController extends ChangeNotifier {
     this._auth, {
     required Future<void> Function() onRemoteApplied,
     FlutterSecureStorage storage = const FlutterSecureStorage(),
+    String storageSuffix = '',
   })  : _storage = storage,
-        _onRemoteApplied = onRemoteApplied;
+        _onRemoteApplied = onRemoteApplied,
+        _vaultKey = 'medzee_vault_id$storageSuffix',
+        _enabledKey = 'medzee_sync_enabled$storageSuffix';
 
-  static const String _vaultKey = 'medzee_vault_id';
-  static const String _enabledKey = 'medzee_sync_enabled';
+  /// Each person on a shared device has their own vault, kept under their own
+  /// keys. The first person's keys have no suffix, so existing installs keep
+  /// their sync code.
+  final String _vaultKey;
+  final String _enabledKey;
   static final RegExp _vaultFormat = RegExp(r'^[0-9a-f]{32}$');
 
   final AppDatabase _db;
@@ -118,6 +124,20 @@ class CloudSyncController extends ChangeNotifier {
     engine.lastSync.addListener(notifyListeners);
     await engine.start();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    // The person was switched or the app is closing: stop talking to the cloud
+    // for them. Listeners go first so nothing notifies a disposed controller.
+    final CloudSyncEngine? engine = _engine;
+    _engine = null;
+    if (engine != null) {
+      engine.phase.removeListener(notifyListeners);
+      engine.lastSync.removeListener(notifyListeners);
+      engine.stop();
+    }
+    super.dispose();
   }
 
   Future<void> _stopEngine() async {
